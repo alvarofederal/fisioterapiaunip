@@ -34,6 +34,7 @@ model User {
   ultimoAcesso DateTime?
 
   materiasCriadas  Materia[]  @relation("MateriaCriadaPor")
+  estudos          Estudo[]   @relation("EstudoDoUsuario")
   trabalhosCriados Trabalho[] @relation("TrabalhoCriadoPor")
 
   criadoEm     DateTime @default(now())
@@ -73,6 +74,7 @@ model Materia {
   criadoPorId String
   criadoPor   User       @relation("MateriaCriadaPor", fields: [criadoPorId], references: [id])
   trabalhos   Trabalho[]
+  aulas       Aula[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -176,4 +178,59 @@ enum CorTema {
   VERMELHO
   ROXO
   LARANJA
+}
+
+// ─────────────────────────────────────────
+// CRONOGRAMA E ESTUDO
+// ─────────────────────────────────────────
+
+/// Um encontro do cronograma: a data em que a matéria acontece.
+/// Conteúdo e horário são combinados pela turma — só o ADMIN edita.
+model Aula {
+  id         String   @id @default(cuid())
+  data       DateTime @db.Date
+  horaInicio String?  @db.VarChar(5) // "08:00"
+  horaFim    String?  @db.VarChar(5) // "10:50"
+
+  /// O que será visto nesse encontro. Alimentado pelo ADMIN.
+  conteudo String? @db.Text
+
+  materiaId String
+  materia   Materia  @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+  estudos   Estudo[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([materiaId, data])
+  @@index([data])
+  @@map("aulas")
+}
+
+/// O acompanhamento de estudo de UMA pessoa sobre UM encontro.
+/// É individual de propósito: a anotação de revisão de cada um é sua, mesmo
+/// que o cronograma seja o mesmo para a turma inteira.
+model Estudo {
+  id         String       @id @default(cuid())
+  status     StatusEstudo @default(A_ESTUDAR)
+  anotacoes  String?      @db.Text
+  revisadoEm DateTime?
+
+  aulaId    String
+  aula      Aula   @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   User   @relation("EstudoDoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([aulaId, usuarioId])
+  @@index([usuarioId, status])
+  @@map("estudos")
+}
+
+enum StatusEstudo {
+  A_ESTUDAR
+  ESTUDANDO
+  REVISADO
 }

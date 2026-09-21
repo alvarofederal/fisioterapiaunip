@@ -56,6 +56,10 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
 7. **Anexo guarda `publicId`** do Cloudinary — sem ele não há como apagar o arquivo remoto.
 8. **Limite de anexo: 4 MB.** Função serverless da Vercel não aceita corpo maior que ~4,5 MB.
 9. **Vocabulário cresce por dado**, em `src/lib/dominio.ts` — nunca por `if/else` nas telas.
+9b. **Data de encontro grava meio-dia UTC** (`T12:00:00.000Z`) e é lida com `timeZone: "UTC"`.
+   Meia-noite UTC vira o dia anterior no Brasil — 17/10 apareceria como 16/10.
+9c. **Cronograma é da turma, estudo é de cada um.** Conteúdo do encontro só o ADMIN edita;
+   status e anotações de estudo são por usuário (`Estudo`, único por aula+usuário).
 10. **Visual segue o `DESIGN.md`** (referência Discord): tema escuro `#0e0f2d`, display SEMPRE
     em caixa alta peso 800, blurple `#5865F2` só em ação primária, raios 12/16/24/9999px,
     um acento cromático por componente, zero box-shadow.
@@ -82,6 +86,7 @@ import { CORES_MATERIA } from "@/lib/dominio"  // vocabulários
 | `/register` | Público | Criar conta (nasce inativa) |
 | `/painel` | Logado | Mural da turma |
 | `/painel/materias` | Logado | Matérias do semestre |
+| `/painel/cronograma` | Logado | Encontros do semestre + acompanhamento pessoal de estudo |
 | `/painel/trabalhos` | Logado | Trabalhos e eventos |
 | `/painel/usuarios` | **ADMIN** | Liberar e gerenciar contas |
 | `/api/register` | Público | Cadastro (rate limit por IP) |
@@ -103,19 +108,20 @@ Alterar schema:
 ```bash
 npm run db:push     # desenvolvimento
 npm run db:studio   # inspecionar dados
-ADMIN_EMAIL="..." ADMIN_SENHA="..." npm run db:seed   # criar/recuperar admin
+ADMIN_EMAIL="..." ADMIN_SENHA="..." npm run db:seed        # criar/recuperar admin
+npm run db:cronograma  # cronograma fixo do semestre (idempotente)
 ```
 
 ---
 
 ## Estado atual
 
-**Pronto:** limpeza do Courtesyfy, schema novo (com RA e arquivamento), login JWT testado
+**Pronto:** CRUD de matérias, cronograma com acompanhamento de estudo, limpeza do Courtesyfy, schema (com RA e arquivamento), login JWT testado
 ponta a ponta, identidade visual Discord aplicada no sistema todo, menu lateral responsivo,
 mural, listagens de matérias, trabalhos (com aba Arquivados) e usuários.
 
-**Próximo:** formulários de cadastro (matérias e trabalhos), upload de anexos, ações de
-arquivar/desarquivar/clonar e de liberar/desativar usuário. Ver `spec/07-portal-spec.md` §11.
+**Próximo:** cadastro de trabalhos com upload de anexos, ações de arquivar/clonar trabalho
+e de liberar/desativar usuário. Ver `spec/07-portal-spec.md` §11.
 
 ---
 

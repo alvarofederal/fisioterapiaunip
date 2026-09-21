@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { Home, BookOpen, ClipboardList, Users, LogOut, Menu, X } from "lucide-react"
+import { Home, BookOpen, CalendarDays, ClipboardList, Users, LogOut, Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { MarcaFisio } from "@/components/marca-fisio"
 import { Avatar, AvatarFallback, AvatarBadge } from "@/components/ui/avatar"
@@ -16,6 +16,7 @@ type Papel = "ADMIN" | "ALUNO"
 const ITENS = [
   { href: "/painel", rotulo: "Início", icone: Home, exato: true },
   { href: "/painel/materias", rotulo: "Matérias", icone: BookOpen },
+  { href: "/painel/cronograma", rotulo: "Cronograma", icone: CalendarDays },
   { href: "/painel/trabalhos", rotulo: "Trabalhos", icone: ClipboardList },
   { href: "/painel/usuarios", rotulo: "Usuários", icone: Users, somenteAdmin: true },
 ] as const

@@ -2,7 +2,13 @@
 // Vocabulários do domínio. Crescer significa acrescentar entrada aqui —
 // nunca espalhar `if/else` pelas telas.
 
-import type { CorTema, DiaSemana, TipoPost, TipoAnexo } from "@/generated/prisma"
+import type {
+  CorTema,
+  DiaSemana,
+  TipoPost,
+  TipoAnexo,
+  StatusEstudo,
+} from "@/generated/prisma"
 
 /**
  * Cores temáticas das matérias, em tons do DESIGN.md.
@@ -125,4 +131,76 @@ export function iniciaisDe(nome: string): string {
   if (partes.length === 0) return "?"
   if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase()
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+}
+
+// ─── Cronograma ──────────────────────────────────────────────────
+
+export const STATUS_ESTUDO: Record<
+  StatusEstudo,
+  { rotulo: string; curto: string; cor: string; suave: string }
+> = {
+  A_ESTUDAR: {
+    rotulo: "A estudar",
+    curto: "A estudar",
+    cor: "#99aab5",
+    suave: "rgba(153, 170, 181, 0.14)",
+  },
+  ESTUDANDO: {
+    rotulo: "Estudando",
+    curto: "Estudando",
+    cor: "#fda220",
+    suave: "rgba(253, 162, 32, 0.16)",
+  },
+  REVISADO: {
+    rotulo: "Revisado",
+    curto: "Revisado",
+    cor: "#57f287",
+    suave: "rgba(87, 242, 135, 0.16)",
+  },
+}
+
+export const ORDEM_STATUS: StatusEstudo[] = ["A_ESTUDAR", "ESTUDANDO", "REVISADO"]
+
+/** Data no formato "sáb, 17 de out" — curto o bastante para caber no card. */
+export function formatarDataCurta(data: Date): string {
+  return data.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  })
+}
+
+/** "Outubro de 2026" — cabeçalho de grupo do cronograma. */
+export function formatarMes(data: Date): string {
+  const texto = data.toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+  return texto.charAt(0).toUpperCase() + texto.slice(1)
+}
+
+/**
+ * Quantos dias faltam, comparando só as datas (sem hora).
+ * Negativo = já passou. Zero = hoje.
+ */
+export function diasAte(data: Date, referencia = new Date()): number {
+  const umDia = 24 * 60 * 60 * 1000
+  const alvo = Date.UTC(data.getUTCFullYear(), data.getUTCMonth(), data.getUTCDate())
+  const hoje = Date.UTC(
+    referencia.getFullYear(),
+    referencia.getMonth(),
+    referencia.getDate()
+  )
+  return Math.round((alvo - hoje) / umDia)
+}
+
+/** Texto humano para a contagem: "hoje", "amanhã", "em 5 dias", "há 3 dias". */
+export function textoDeProximidade(dias: number): string {
+  if (dias === 0) return "hoje"
+  if (dias === 1) return "amanhã"
+  if (dias === -1) return "ontem"
+  if (dias > 1) return `em ${dias} dias`
+  return `há ${Math.abs(dias)} dias`
 }
