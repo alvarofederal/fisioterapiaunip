@@ -48,3 +48,6 @@ next-env.d.ts
 backups/
 *.sql
 .claude/worktrees/
+
+# Backup local
+*.7z

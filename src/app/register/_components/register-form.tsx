@@ -2,170 +2,124 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Mail, Lock, Chrome } from "lucide-react"
+import { Loader2, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
-import { signIn } from "next-auth/react"
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.10)",
-  borderRadius: "12px",
-  padding: "12px 12px 12px 40px",
-  color: "#fff",
-  fontSize: "14px",
-  outline: "none",
-  transition: "border-color 0.2s",
-}
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "12px",
-  fontWeight: 600,
-  marginBottom: "6px",
-  color: "rgba(255,255,255,0.50)",
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-}
+const CLASSE_CAMPO =
+  "h-10 w-full rounded-md border border-[#e5e5e5] bg-white px-3 text-[14px] text-[#171717] outline-none transition-colors placeholder:text-[#737373] focus:border-[#171717] focus:ring-[3px] focus:ring-black/8"
 
 export function RegisterForm() {
   const router = useRouter()
-  const [loading, setLoading]             = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [focused, setFocused]             = useState<string | null>(null)
-  const [formData, setFormData]           = useState({
-    email: "", password: "", confirmPassword: "",
-  })
+  const [carregando, setCarregando] = useState(false)
+  const [concluido, setConcluido] = useState<string | null>(null)
+  const [dados, setDados] = useState({ nome: "", email: "", password: "" })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("As senhas não coincidem")
-      return
-    }
-    if (formData.password.length < 8) {
-      toast.error("Senha deve ter no mínimo 8 caracteres")
-      return
-    }
-    setLoading(true)
+  async function aoEnviar(evento: React.FormEvent) {
+    evento.preventDefault()
+    setCarregando(true)
+
     try {
-      const res  = await fetch("/api/register", {
-        method:  "POST",
+      const resposta = await fetch("/api/register", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(formData),
+        body: JSON.stringify(dados),
       })
-      const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error || "Erro ao criar conta")
-        setLoading(false)
+      const corpo = await resposta.json()
+
+      if (!resposta.ok) {
+        toast.error(corpo.error ?? "Não foi possível criar a conta")
+        setCarregando(false)
         return
       }
-      if (data.devAutoVerified) {
-        toast.success("Conta criada! Redirecionando...")
+
+      if (corpo.primeiroAcesso) {
+        toast.success("Conta de administrador criada!")
         router.push("/login")
         return
       }
-      if (data.expiresAt) {
-        localStorage.setItem("verificationExpiry", data.expiresAt)
-        localStorage.setItem("verificationEmail", formData.email)
-      }
-      toast.success("Conta criada! Verifique seu email.")
-      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`)
+
+      setConcluido(corpo.message)
     } catch {
-      toast.error("Erro ao criar conta")
-      setLoading(false)
+      toast.error("Erro ao criar conta. Tente novamente.")
+      setCarregando(false)
     }
   }
 
-  const handleGoogle = async () => {
-    setGoogleLoading(true)
-    await signIn("google", { callbackUrl: "/dashboard" })
+  if (concluido) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-4 text-center">
+        <CheckCircle2 className="h-10 w-10 text-[#16a34a]" aria-hidden />
+        <h2 className="text-[16px] font-semibold text-[#171717]">Conta criada</h2>
+        <p className="text-[14px] leading-relaxed text-[#525252]">{concluido}</p>
+        <p className="text-[13px] text-[#737373]">
+          Assim que for liberado, você já consegue entrar com seu e-mail e senha.
+        </p>
+      </div>
+    )
   }
 
-  const field = (id: string) => ({
-    onFocus: () => setFocused(id),
-    onBlur:  () => setFocused(null),
-    style:   { ...inputStyle, borderColor: focused === id ? "rgba(16,185,129,0.5)" : "rgba(255,255,255,0.10)" },
-  })
-
   return (
-    <div className="space-y-5">
-      {/* Google */}
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={googleLoading}
-        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          color: "rgba(255,255,255,0.80)",
-        }}
-      >
-        {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Chrome className="w-4 h-4" />}
-        Cadastrar com Google
-      </button>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>ou</span>
-        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4" noValidate>
+      <div>
+        <label htmlFor="nome" className="mb-1.5 block text-[13px] font-medium text-[#171717]">
+          Nome completo
+        </label>
+        <input
+          id="nome"
+          type="text"
+          autoComplete="name"
+          required
+          maxLength={80}
+          value={dados.nome}
+          onChange={(e) => setDados({ ...dados, nome: e.target.value })}
+          placeholder="Como seus colegas te conhecem"
+          className={CLASSE_CAMPO}
+        />
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label style={labelStyle}>Email</label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: focused === "email" ? "#10b981" : "rgba(255,255,255,0.28)" }} />
-            <input type="email" required placeholder="seu@email.com"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              {...field("email")} />
-          </div>
-        </div>
+      <div>
+        <label htmlFor="email" className="mb-1.5 block text-[13px] font-medium text-[#171717]">
+          E-mail
+        </label>
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={dados.email}
+          onChange={(e) => setDados({ ...dados, email: e.target.value })}
+          placeholder="seu.email@exemplo.com"
+          className={CLASSE_CAMPO}
+        />
+      </div>
 
-        <div>
-          <label style={labelStyle}>Senha</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: focused === "password" ? "#10b981" : "rgba(255,255,255,0.28)" }} />
-            <input type="password" required minLength={8} placeholder="Mín. 8 caracteres"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              {...field("password")} />
-          </div>
-          <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.22)" }}>
-            Mín. 8 caracteres, com maiúscula, número e símbolo
-          </p>
-        </div>
+      <div>
+        <label htmlFor="password" className="mb-1.5 block text-[13px] font-medium text-[#171717]">
+          Senha
+        </label>
+        <input
+          id="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={dados.password}
+          onChange={(e) => setDados({ ...dados, password: e.target.value })}
+          placeholder="••••••••"
+          className={CLASSE_CAMPO}
+        />
+        <p className="mt-1.5 text-[12px] text-[#737373]">
+          Mínimo de 8 caracteres, com maiúscula, minúscula e número.
+        </p>
+      </div>
 
-        <div>
-          <label style={labelStyle}>Confirmar senha</label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: focused === "confirm" ? "#10b981" : "rgba(255,255,255,0.28)" }} />
-            <input type="password" required placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              {...field("confirm")} />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-black transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 mt-2"
-          style={{
-            background: "linear-gradient(135deg, #10b981, #059669)",
-            boxShadow: "0 0 24px rgba(16,185,129,0.30)",
-          }}
-        >
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando conta...</> : "Criar conta grátis"}
-        </button>
-      </form>
-    </div>
+      <button
+        type="submit"
+        disabled={carregando}
+        className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-black px-4 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-[#262626] disabled:opacity-60"
+      >
+        {carregando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+        {carregando ? "Criando..." : "Criar conta"}
+      </button>
+    </form>
   )
 }

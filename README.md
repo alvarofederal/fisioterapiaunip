@@ -1,99 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fisioterapia UNIP — Portal da Turma
 
-## Getting Started
+Matérias, trabalhos, eventos e materiais de aula em um lugar só, para a turma inteira.
 
-First, run the development server:
+**Produção:** [fisioterapiaunip.vercel.app](https://fisioterapiaunip.vercel.app)
+
+---
+
+## Como funciona
+
+- O aluno cria a conta, que nasce **inativa**
+- O **administrador** libera o acesso na tela de Usuários
+- Depois disso ele vê o mural com trabalhos, eventos e avisos, e baixa os materiais
+
+---
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript · Prisma 5 / MySQL · NextAuth v5 com sessão JWT ·
+Tailwind v4 · Cloudinary · Vercel
+
+---
+
+## Rodar localmente
 
 ```bash
+npm install
+npm run db:push
+ADMIN_EMAIL="voce@exemplo.com" ADMIN_SENHA="SuaSenha123" npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra `http://localhost:3000` e entre com o e-mail e a senha do seed.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Variáveis de ambiente
 
-## Learn More
+| Variável | Para quê |
+|----------|----------|
+| `DATABASE_URL` | MySQL. Em serverless, acrescente `?connection_limit=1&pool_timeout=20` |
+| `AUTH_SECRET` | Assinatura do JWT. Gere com `npx auth secret` |
+| `AUTH_URL` | URL pública do site |
+| `NEXT_PUBLIC_URL` | Mesma URL, exposta ao navegador |
+| `CLOUDINARY_NAME` / `CLOUDINARY_KEY` / `CLOUDINARY_SECRET` | Upload de anexos |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Comando | O que faz |
+|---------|-----------|
+| `npm run dev` | Desenvolvimento |
+| `npm run build` | Build de produção |
+| `npm run db:push` | Aplica o schema no banco |
+| `npm run db:studio` | Inspeciona os dados |
+| `npm run db:seed` | Cria ou recupera a conta de administrador |
 
-## Deploy on Vercel
+> O build **não** aplica migração. Isso é deliberado: `prisma db push --accept-data-loss`
+> rodando a cada deploy já foi a causa de risco real de perda de dados neste projeto.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# basemedical" 
+## Documentação
 
-
-# Sequência para Git Flow
-
-
-## Iniciando o Git Flow
-git checkout -b develop
-git flow init
-
-
-## Criação de uma feature
-git checkout develop
-git checkout -b name-feature
-
-git flow feature start name-feature
-
-
-## Finalização de uma feature
-git checkout develop
-git merge name-feature
-
-git flow feature finish name-feature
-
-
-
-### Branch Hotfix
-##Criação de um Hotfix
-git checkout master
-git checkout -b name-hotfix
-
-git flow hotfix start name-hotfix
-
-## Finalização de um Hotfix
-git checkout master
-git merge name-hotfix
-git checkout develop
-git merge name-hotfix
-git tag name-hotfix
-
-git flow hotfix finish name-hotfix
-
-
-
-### Branch Release
-## Criação de uma Release
-git checkout develop
-git checkout -b release/1.0.0
-
-git flow release start 1.0.0
-
-## Finalização de uma Release
-git checkout master
-git merge release/1.0.0
-git checkout develop
-git merge release/1.0.0
-git tag 1.0.0
-
-git flow release finish 1.0.0
-
-git checkout -b secao5aula50
-"# courtesyfy" 
-# courtesyfy
+A documentação geral fica na pasta base, um nível acima deste repositório:
+`DESIGN.md` (paleta) e `spec/07-portal-spec.md` (especificação do portal).

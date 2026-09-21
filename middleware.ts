@@ -1,46 +1,31 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const CANONICAL_HOST = "courtesyfy.com.br"
+/**
+ * Rotas abertas. Todo o resto exige cookie de sessão.
+ *
+ * O middleware roda no edge e NÃO consulta o Prisma: ele só verifica a
+ * presença do cookie. A checagem real de papel e de conta ativa acontece
+ * no servidor, dentro de cada página do painel.
+ */
+const ROTAS_PUBLICAS = ["/login", "/register"]
 
 export function middleware(request: NextRequest) {
-  // ✅ Redireciona o domínio Vercel para o domínio canônico em produção
-  // Evita que o usuário fique preso em courtesyfy.vercel.app
-  const host = request.headers.get("host") ?? ""
-  if (host.includes("vercel.app") && process.env.NODE_ENV === "production") {
-    const url = request.nextUrl.clone()
-    url.protocol = "https:"
-    url.host = CANONICAL_HOST
-    return NextResponse.redirect(url, { status: 301 })
-  }
-
   const { pathname } = request.nextUrl
 
-  const publicRoutes = [
-    "/login",
-    "/register",
-    "/verify-email",
-    "/forgot-password",
-    "/reset-password",
-    "/auth",
-    "/c/",          // landing page pública das chaves
-  ]
+  const ehPublica =
+    pathname === "/" || ROTAS_PUBLICAS.some((rota) => pathname.startsWith(rota))
 
-  const isPublicRoute =
-    pathname === "/" ||
-    publicRoutes.some(route => pathname.startsWith(route))
+  if (ehPublica) return NextResponse.next()
 
-  if (isPublicRoute) {
-    return NextResponse.next()
-  }
-
-  // Verifica apenas cookie — sem Prisma no middleware
-  const sessionToken =
+  const cookieSessao =
     request.cookies.get("authjs.session-token")?.value ||
     request.cookies.get("__Secure-authjs.session-token")?.value
 
-  if (!sessionToken) {
-    return NextResponse.redirect(new URL("/login", request.url))
+  if (!cookieSessao) {
+    const destino = new URL("/login", request.url)
+    destino.searchParams.set("redirect", pathname)
+    return NextResponse.redirect(destino)
   }
 
   return NextResponse.next()

@@ -2,175 +2,95 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { Loader2, Mail, Lock, Chrome } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import Link from "next/link"
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  background: "rgba(255,255,255,0.04)",
-  border: "1px solid rgba(255,255,255,0.10)",
-  borderRadius: "12px",
-  padding: "12px 12px 12px 40px",
-  color: "#fff",
-  fontSize: "14px",
-  outline: "none",
-  transition: "border-color 0.2s",
-}
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "12px",
-  fontWeight: 600,
-  marginBottom: "6px",
-  color: "rgba(255,255,255,0.50)",
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-}
 
 export function LoginForm() {
-  const [loading, setLoading]           = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [formData, setFormData]         = useState({ email: "", password: "" })
-  const [focused, setFocused]           = useState<string | null>(null)
+  const router = useRouter()
+  const parametros = useSearchParams()
+  const [carregando, setCarregando] = useState(false)
+  const [dados, setDados] = useState({ email: "", password: "" })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  async function aoEnviar(evento: React.FormEvent) {
+    evento.preventDefault()
+    setCarregando(true)
+
     try {
-      const res  = await fetch("/api/auth/login-and-redirect", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(formData),
+      const resultado = await signIn("credentials", {
+        email: dados.email,
+        password: dados.password,
+        redirect: false,
       })
-      const data = await res.json()
-      if (!res.ok) {
-        if (data.code === "EMAIL_NOT_VERIFIED") {
-          toast.error("Email não verificado", {
-            description: "Verifique sua caixa de entrada.",
-            action: {
-              label: "Reenviar código",
-              onClick: () => (window.location.href = `/verify-email?email=${encodeURIComponent(formData.email)}`),
-            },
-          })
-        } else {
-          toast.error(data.error || "Email ou senha incorretos")
-        }
-        setLoading(false)
+
+      if (!resultado || resultado.error) {
+        // Mensagem única de propósito: não revelamos se o e-mail existe nem se a
+        // conta está só aguardando liberação. Ver comentário em src/lib/auth.ts.
+        toast.error("Não foi possível entrar", {
+          description:
+            "E-mail ou senha incorretos — ou sua conta ainda não foi liberada pelo administrador da turma.",
+        })
+        setCarregando(false)
         return
       }
-      toast.success("Login realizado!")
-      window.location.href = data.redirectTo
-    } catch {
-      toast.error("Erro ao fazer login")
-      setLoading(false)
-    }
-  }
 
-  const handleGoogle = async () => {
-    setGoogleLoading(true)
-    try {
-      await signIn("google", { callbackUrl: "/dashboard", redirect: true })
+      const destino = parametros.get("redirect") ?? "/painel"
+      router.push(destino)
+      router.refresh()
     } catch {
-      toast.error("Erro ao fazer login com Google")
-      setGoogleLoading(false)
+      toast.error("Erro ao entrar. Tente novamente.")
+      setCarregando(false)
     }
   }
 
   return (
-    <div className="space-y-5">
-      {/* Google */}
-      <button
-        type="button"
-        onClick={handleGoogle}
-        disabled={googleLoading}
-        className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
-        style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.10)",
-          color: "rgba(255,255,255,0.80)",
-        }}
-      >
-        {googleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Chrome className="w-4 h-4" />}
-        Continuar com Google
-      </button>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>ou</span>
-        <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.07)" }} />
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4" noValidate>
+      <div>
+        <label
+          htmlFor="email"
+          className="mb-1.5 block text-[13px] font-medium text-[#171717]"
+        >
+          E-mail
+        </label>
+        <input
+          id="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={dados.email}
+          onChange={(e) => setDados({ ...dados, email: e.target.value })}
+          placeholder="seu.email@exemplo.com"
+          className="h-10 w-full rounded-md border border-[#e5e5e5] bg-white px-3 text-[14px] text-[#171717] outline-none transition-colors placeholder:text-[#737373] focus:border-[#171717] focus:ring-[3px] focus:ring-black/8"
+        />
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label style={labelStyle}>Email</label>
-          <div className="relative">
-            <Mail
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: focused === "email" ? "#10b981" : "rgba(255,255,255,0.28)" }}
-            />
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              onFocus={() => setFocused("email")}
-              onBlur={() => setFocused(null)}
-              placeholder="seu@email.com"
-              style={{
-                ...inputStyle,
-                borderColor: focused === "email" ? "rgba(16,185,129,0.5)" : "rgba(255,255,255,0.10)",
-              }}
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label style={labelStyle}>Senha</label>
-            <Link
-              href="/forgot-password"
-              className="text-xs transition-colors hover:text-white"
-              style={{ color: "rgba(255,255,255,0.30)" }}
-            >
-              Esqueceu?
-            </Link>
-          </div>
-          <div className="relative">
-            <Lock
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-              style={{ color: focused === "password" ? "#10b981" : "rgba(255,255,255,0.28)" }}
-            />
-            <input
-              type="password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              onFocus={() => setFocused("password")}
-              onBlur={() => setFocused(null)}
-              placeholder="••••••••"
-              style={{
-                ...inputStyle,
-                borderColor: focused === "password" ? "rgba(16,185,129,0.5)" : "rgba(255,255,255,0.10)",
-              }}
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-black transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60 mt-2"
-          style={{
-            background: "linear-gradient(135deg, #10b981, #059669)",
-            boxShadow: "0 0 24px rgba(16,185,129,0.30)",
-          }}
+      <div>
+        <label
+          htmlFor="password"
+          className="mb-1.5 block text-[13px] font-medium text-[#171717]"
         >
-          {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Entrando...</> : "Entrar"}
-        </button>
-      </form>
-    </div>
+          Senha
+        </label>
+        <input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={dados.password}
+          onChange={(e) => setDados({ ...dados, password: e.target.value })}
+          placeholder="••••••••"
+          className="h-10 w-full rounded-md border border-[#e5e5e5] bg-white px-3 text-[14px] text-[#171717] outline-none transition-colors placeholder:text-[#737373] focus:border-[#171717] focus:ring-[3px] focus:ring-black/8"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={carregando}
+        className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-black px-4 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-[#262626] disabled:opacity-60"
+      >
+        {carregando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+        {carregando ? "Entrando..." : "Entrar"}
+      </button>
+    </form>
   )
 }

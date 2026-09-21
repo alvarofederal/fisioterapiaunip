@@ -4,9 +4,14 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { registerSchema } from "@/lib/validators/auth"
-import { sendVerificationEmail } from "@/lib/email"
 import { checkRateLimit } from "@/lib/rate-limit"
 
+/**
+ * Auto-cadastro do aluno.
+ *
+ * A conta é criada SEMPRE com `ativo: false`. Quem libera é o ADMIN, na tela
+ * de Usuários. É isso que impede que alguém de fora da turma entre no portal.
+ */
 export async function POST(request: NextRequest) {
   try {
     const ip =
@@ -23,76 +28,53 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const validation = registerSchema.safeParse(body)
+    const validacao = registerSchema.safeParse(body)
 
-    if (!validation.success) {
+    if (!validacao.success) {
       return NextResponse.json(
-        { error: validation.error.errors[0].message },
+        { error: validacao.error.issues[0].message },
         { status: 400 }
       )
     }
 
-    const { email, password } = validation.data
+    const { nome, email, password } = validacao.data
 
-    const existingUser = await prisma.user.findUnique({ where: { email } })
-
-    if (existingUser) {
+    const jaExiste = await prisma.user.findUnique({ where: { email } })
+    if (jaExiste) {
       return NextResponse.json(
-        { error: "Este email já está cadastrado" },
+        { error: "Este e-mail já está cadastrado." },
         { status: 400 }
       )
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12)
-    const isDev = process.env.NODE_ENV === "development"
+    const senhaHash = await bcrypt.hash(password, 12)
 
-    const user = await prisma.user.create({
+    // O primeiro usuário do portal nasce ADMIN e já ativo: sem isso não há
+    // como liberar ninguém, e o sistema ficaria trancado para sempre.
+    const portalVazio = (await prisma.user.count()) === 0
+
+    await prisma.user.create({
       data: {
+        nome,
         email,
-        password: hashedPassword,
-        // Em dev, pula verificação de email automaticamente
-        emailVerified: isDev ? new Date() : null,
+        senha: senhaHash,
+        role: portalVazio ? "ADMIN" : "ALUNO",
+        ativo: portalVazio,
       },
     })
-
-    if (isDev) {
-      console.log(`\n🚀 [DEV] Conta criada e verificada automaticamente: ${email}\n`)
-      return NextResponse.json(
-        { success: true, message: "Conta criada!", userId: user.id, devAutoVerified: true },
-        { status: 201 }
-      )
-    }
-
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = new Date()
-    expiresAt.setMinutes(expiresAt.getMinutes() + 15)
-
-    await prisma.authToken.create({
-      data: {
-        userId: user.id,
-        token: verificationCode,
-        type: "EMAIL_VERIFICATION",
-        expiresAt,
-      },
-    })
-
-    try {
-      await sendVerificationEmail(email, verificationCode, 15)
-    } catch (emailError) {
-      console.error("Erro ao enviar email:", emailError)
-    }
 
     return NextResponse.json(
       {
         success: true,
-        message: "Conta criada! Verifique seu email.",
-        userId: user.id,
-        expiresAt: expiresAt.toISOString(),
+        primeiroAcesso: portalVazio,
+        message: portalVazio
+          ? "Conta de administrador criada! Você já pode entrar."
+          : "Conta criada! Aguarde a liberação do administrador da turma.",
       },
       { status: 201 }
     )
   } catch (error) {
-    console.error("Erro no registro:", error)
+    console.error("Erro no cadastro:", error)
     return NextResponse.json(
       { error: "Erro ao criar conta. Tente novamente." },
       { status: 500 }

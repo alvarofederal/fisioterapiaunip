@@ -1,571 +1,169 @@
 // prisma/schema.prisma
+// Portal da Turma — Fisioterapia UNIP
+// Ver spec/07-portal-spec.md (pasta base do projeto) para o racional do modelo.
 
 generator client {
-  provider        = "prisma-client-js"
-  output          = "../src/generated/prisma"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider     = "mysql"
-  url          = env("DATABASE_URL")
-  relationMode = "prisma"
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 // ─────────────────────────────────────────
-// AUTH
+// USUÁRIOS
 // ─────────────────────────────────────────
 
+/// Conta de acesso ao portal.
+/// `ativo` é o portão: toda conta nasce inativa e só entra depois que o ADMIN libera.
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          Role      @default(LOJISTA)
-  ativo         Boolean   @default(true)
-  ultimoAcesso  DateTime?
-  lojaId        String?
+  id           String    @id @default(cuid())
+  nome         String
+  email        String    @unique
+  senha        String    @db.VarChar(255) // hash bcrypt — nunca texto puro
+  role         Role      @default(ALUNO)
+  ativo        Boolean   @default(false)
+  ultimoAcesso DateTime?
 
-  loja          Loja?       @relation(fields: [lojaId], references: [id])
-  accounts      Account[]
-  sessions      Session[]
-  authTokens    AuthToken[]
-  resgates      Resgate[]
-  logsEventos   LogEvento[]
-  chavesCancel           Chave[]                @relation("CanceladoPor")
-  campanhasCria          Campanha[]             @relation("CriadoPor")
-  lotesGerados           LoteChave[]            @relation("GeradoPor")
-  impressoesAprovadas    SolicitacaoImpressao[] @relation("ImpressaoAprovacao")
-  pagamentosConfirmados  SolicitacaoImpressao[] @relation("ImpressaoPagamento")
+  materiasCriadas  Materia[]  @relation("MateriaCriadaPor")
+  trabalhosCriados Trabalho[] @relation("TrabalhoCriadoPor")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@index([lojaId])
-  @@map("users")
+  @@index([role])
+  @@index([ativo])
+  @@map("usuarios")
 }
 
-model Account {
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?  @db.Text
-  access_token      String?  @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?  @db.Text
-  session_state     String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([provider, providerAccountId])
-  @@index([userId])
-  @@map("accounts")
-}
-
-model Session {
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String
-  expires    DateTime
-
-  @@id([identifier, token])
-  @@map("verification_tokens")
-}
-
-model AuthToken {
-  id        String    @id @default(cuid())
-  userId    String
-  token     String    @unique @db.VarChar(500)
-  type      TokenType
-  expiresAt DateTime
-  used      Boolean   @default(false)
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([token])
-  @@index([expiresAt])
-  @@map("auth_tokens")
-}
-
+/// Tentativas de login, para travar força bruta por e-mail e por IP.
 model LoginAttempt {
   id        String   @id @default(cuid())
   email     String
-  ipAddress String
-  success   Boolean
-  createdAt DateTime @default(now())
+  ip        String?
+  sucesso   Boolean  @default(false)
+  criadoEm  DateTime @default(now())
 
-  @@index([email])
-  @@index([ipAddress])
-  @@index([createdAt])
-  @@map("login_attempts")
+  @@index([email, criadoEm])
+  @@index([ip, criadoEm])
+  @@map("tentativas_login")
 }
 
 // ─────────────────────────────────────────
-// DOMÍNIO COURTESYFY
+// MATÉRIAS
 // ─────────────────────────────────────────
 
-model Loja {
-  id           String     @id @default(cuid())
-  nome         String
-  razaoSocial  String?
-  cnpjCpf      String?    @unique
-  email        String     @unique
-  telefone     String?
-  logradouro   String?
-  numero       String?
-  complemento  String?
-  bairro       String?
-  cidade       String?
-  estado       String?    @db.Char(2)
-  cep          String?
-  logoUrl      String?    @db.Text
-  corPrimaria  String     @default("#c8a96e")
-  nomeExibicao String?
-  siteUrl      String?    @db.Text
-  status       LojaStatus @default(ATIVA)
-  plano        Plano      @default(ESSENCIAL)
+model Materia {
+  id        String    @id @default(cuid())
+  nome      String
+  professor String?
+  diaSemana DiaSemana @default(A_DEFINIR)
+  anotacoes String?   @db.Text
+  cor       CorTema   @default(AZUL)
+  arquivada Boolean   @default(false)
 
-  stripeCustomerId       String?   @unique
-  stripeSubscriptionId   String?   @unique
-  stripePriceId          String?
-  stripeCurrentPeriodEnd DateTime?
-
-  // Impressão: PROPRIO = lojista imprime sozinho | ADMIN_COURTESYFY = solicita ao admin
-  tipoImpressao TipoImpressao @default(PROPRIO)
-
-  // Totem de resgate público
-  totemLayoutId  String?
-  totemTitulo    String?  @db.VarChar(100)
-  totemSubtitulo String?  @db.VarChar(200)
-  totemLayout    Layout?  @relation("LojaTotemLayout", fields: [totemLayoutId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  usuarios               User[]
-  campanhas              Campanha[]
-  lotes                  LoteChave[]
-  chaves                 Chave[]
-  resgates               Resgate[]
-  logsEventos            LogEvento[]
-  layouts                Layout[]
-  solicitacoesImpressao  SolicitacaoImpressao[]
+  criadoPorId String
+  criadoPor   User       @relation("MateriaCriadaPor", fields: [criadoPorId], references: [id])
+  trabalhos   Trabalho[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@index([totemLayoutId])
-  @@map("lojas")
-}
-
-model Layout {
-  id             String      @id @default(cuid())
-  lojaId         String
-  nome           String
-  corPrimaria    String      @default("#c8a96e")
-  corFundo       String      @default("#fffdf7")
-  corTexto       String      @default("#3a2510")
-  corSecundaria  String      @default("#5a3e28")
-  imagem1Url     String?     @db.Text
-  imagem2Url     String?     @db.Text
-  imagem3Url     String?     @db.Text
-  opacidadeFundo Int         @default(20)
-  brilho         Int         @default(100)
-  saturacao      Int         @default(100)
-  contraste      Int         @default(100)
-  tamanhoCard    TamanhoCard @default(PADRAO)
-  estiloCard     EstiloCard  @default(CLASSICO)
-  raioCantos     Int         @default(8)
-  padrao         Boolean     @default(false)
-  posicaoChaveX  Float?
-  posicaoChaveY  Float?
-  escalaChave    Float       @default(1)
-
-  loja                  Loja                   @relation(fields: [lojaId], references: [id])
-  campanhas             Campanha[]
-  solicitacoesImpressao SolicitacaoImpressao[]
-  lojasTotem            Loja[]                 @relation("LojaTotemLayout")
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([lojaId])
-  @@map("layouts")
-}
-
-model Campanha {
-  id               String         @id @default(cuid())
-  lojaId           String
-  layoutId         String?
-  nome             String
-  descricao        String?        @db.Text
-  tipoBeneficio    TipoBeneficio
-  valorBeneficio   Decimal?       @db.Decimal(10, 2)
-  descricaoPremio  String?        @db.Text
-  regrasUso        String?        @db.Text
-  quantidadeChaves Int
-  inicioEm         DateTime
-  expiraEm         DateTime
-  status           CampanhaStatus @default(RASCUNHO)
-  landingPageSlug  String?        @unique
-  criadoPorId      String?
-
-  loja                  Loja                   @relation(fields: [lojaId], references: [id])
-  layout                Layout?                @relation(fields: [layoutId], references: [id])
-  criadoPor             User?                  @relation("CriadoPor", fields: [criadoPorId], references: [id])
-  lotes                 LoteChave[]
-  chaves                Chave[]
-  resgates              Resgate[]
-  logsEventos           LogEvento[]
-  solicitacoesImpressao SolicitacaoImpressao[]
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([lojaId])
-  @@index([layoutId])
   @@index([criadoPorId])
-  @@index([status])
-  @@index([expiraEm])
-  @@map("campanhas")
+  @@index([arquivada])
+  @@index([diaSemana])
+  @@map("materias")
 }
 
-model LoteChave {
-  id           String       @id @default(cuid())
-  campanhaId   String
-  lojaId       String
-  descricao    String?
-  quantidade   Int
-  geradoPorId  String?
-  formatoSaida FormatoSaida @default(A4)
-  arquivoUrl   String?      @db.Text
-  status       LoteStatus   @default(GERADO)
+// ─────────────────────────────────────────
+// TRABALHOS / EVENTOS / AVISOS
+// ─────────────────────────────────────────
 
-  campanha              Campanha               @relation(fields: [campanhaId], references: [id])
-  loja                  Loja                   @relation(fields: [lojaId], references: [id])
-  geradoPor             User?                  @relation("GeradoPor", fields: [geradoPorId], references: [id])
-  chaves                Chave[]
-  solicitacoesImpressao SolicitacaoImpressao[]
+/// O que alimenta o mural da tela inicial.
+model Trabalho {
+  id        String    @id @default(cuid())
+  titulo    String
+  descricao String?   @db.Text
+  tipo      TipoPost  @default(TRABALHO)
+  entregaEm DateTime?
+  publicado Boolean   @default(true)
 
-  criadoEm DateTime @default(now())
-
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([geradoPorId])
-  @@map("lotes_chaves")
-}
-
-model Chave {
-  id             String      @id @default(cuid())
-  codigo         String      @unique
-  loteId         String
-  campanhaId     String
-  lojaId         String
-  clienteId      String?
-  status         ChaveStatus @default(GERADA)
-  qrcodeUrl      String?     @db.Text
-  landingUrl     String?     @db.Text
-  ativadaEm      DateTime?
-  resgatadaEm    DateTime?
-  expiradaEm     DateTime?
-  canceladaEm    DateTime?
-  canceladoPorId String?
-
-  lote         LoteChave @relation(fields: [loteId], references: [id])
-  campanha     Campanha  @relation(fields: [campanhaId], references: [id])
-  loja         Loja      @relation(fields: [lojaId], references: [id])
-  cliente      Cliente?  @relation(fields: [clienteId], references: [id])
-  canceladoPor User?     @relation("CanceladoPor", fields: [canceladoPorId], references: [id])
-  resgate      Resgate?
-  logsEventos  LogEvento[]
+  materiaId   String
+  materia     Materia @relation(fields: [materiaId], references: [id])
+  criadoPorId String
+  criadoPor   User    @relation("TrabalhoCriadoPor", fields: [criadoPorId], references: [id])
+  anexos      Anexo[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@index([loteId])
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([clienteId])
-  @@index([canceladoPorId])
-  @@index([status])
-  @@map("chaves")
+  @@index([materiaId])
+  @@index([criadoPorId])
+  @@index([entregaEm])
+  @@index([publicado, criadoEm])
+  @@map("trabalhos")
 }
 
-model Cliente {
-  id          String      @id @default(cuid())
-  telefone    String?
-  email       String?
-  nome        String?
-  documento   String?
-  ipCadastro  String?
-  canalOrigem CanalOrigem @default(WEB)
+/// Arquivo anexado a um trabalho: foto do quadro, PDF de slides, documento.
+/// `publicId` é o identificador no Cloudinary — sem ele não há como apagar o
+/// arquivo remoto quando o trabalho é excluído.
+model Anexo {
+  id       String    @id @default(cuid())
+  nome     String // nome original enviado pelo usuário
+  url      String    @db.VarChar(500)
+  publicId String    @db.VarChar(255)
+  tipo     TipoAnexo
+  tamanho  Int // bytes
 
-  chaves      Chave[]
-  resgates    Resgate[]
-  logsEventos LogEvento[]
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@map("clientes")
-}
-
-model Resgate {
-  id                String        @id @default(cuid())
-  chaveId           String        @unique
-  campanhaId        String
-  lojaId            String
-  clienteId         String?
-  operadorId        String?
-  canal             CanalResgate  @default(BALCAO)
-  statusResgate     StatusResgate @default(CONFIRMADO)
-  beneficioEntregue String?       @db.Text
-  observacao        String?       @db.Text
-  ipOrigem          String?
-
-  chave    Chave    @relation(fields: [chaveId], references: [id])
-  campanha Campanha @relation(fields: [campanhaId], references: [id])
-  loja     Loja     @relation(fields: [lojaId], references: [id])
-  cliente  Cliente? @relation(fields: [clienteId], references: [id])
-  operador User?    @relation(fields: [operadorId], references: [id])
-
-  resgatadoEm DateTime @default(now())
-
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([clienteId])
-  @@index([operadorId])
-  @@map("resgates")
-}
-
-model LogEvento {
-  id         String     @id @default(cuid())
-  tipoEvento TipoEvento
-  chaveId    String?
-  campanhaId String?
-  lojaId     String?
-  clienteId  String?
-  operadorId String?
-  canal      String?
-  ipOrigem   String?
-  userAgent  String?    @db.Text
-  payload    Json?
-
-  chave    Chave?    @relation(fields: [chaveId], references: [id])
-  campanha Campanha? @relation(fields: [campanhaId], references: [id])
-  loja     Loja?     @relation(fields: [lojaId], references: [id])
-  cliente  Cliente?  @relation(fields: [clienteId], references: [id])
-  operador User?     @relation(fields: [operadorId], references: [id])
+  trabalhoId String
+  trabalho   Trabalho @relation(fields: [trabalhoId], references: [id], onDelete: Cascade)
 
   criadoEm DateTime @default(now())
 
-  @@index([chaveId])
-  @@index([campanhaId])
-  @@index([lojaId])
-  @@index([clienteId])
-  @@index([operadorId])
-  @@index([tipoEvento])
-  @@index([criadoEm])
-  @@map("logs_eventos")
+  @@index([trabalhoId])
+  @@map("anexos")
 }
 
 // ─────────────────────────────────────────
-// ENUMS
+// VOCABULÁRIOS
 // ─────────────────────────────────────────
-
-enum TokenType {
-  EMAIL_VERIFICATION
-  PASSWORD_RESET
-}
 
 enum Role {
-  SUPER_ADMIN
-  LOJISTA
-  CLIENTE
+  ADMIN
+  ALUNO
 }
 
-enum LojaStatus {
-  ATIVA
-  SUSPENSA
-  CANCELADA
+enum TipoPost {
+  TRABALHO
+  EVENTO
+  AVISO
 }
 
-enum Plano {
-  ESSENCIAL
-  PROFISSIONAL
-  EMPRESARIAL
+enum TipoAnexo {
+  IMAGEM
+  PDF
+  DOCUMENTO
+  APRESENTACAO
+  OUTRO
 }
 
-enum TipoBeneficio {
-  DESCONTO_PERCENTUAL
-  DESCONTO_FIXO
-  BRINDE
-  SORTEIO
-  FRETE_GRATIS
-  CASHBACK
+enum DiaSemana {
+  SEGUNDA
+  TERCA
+  QUARTA
+  QUINTA
+  SEXTA
+  SABADO
+  DOMINGO
+  A_DEFINIR
 }
 
-enum CampanhaStatus {
-  RASCUNHO
-  ATIVA
-  PAUSADA
-  ENCERRADA
-  CANCELADA
-}
-
-enum FormatoSaida {
-  A4
-  ETIQUETA
-  ADESIVO
-  CSV
-  DIGITAL
-}
-
-enum LoteStatus {
-  GERADO
-  EXPORTADO
-  DISTRIBUIDO
-}
-
-enum ChaveStatus {
-  GERADA
-  CONSULTADA
-  ATIVADA
-  RESGATADA
-  EXPIRADA
-  CANCELADA
-}
-
-enum CanalOrigem {
-  WEB
-  QRCODE
-  MANUAL
-}
-
-enum CanalResgate {
-  BALCAO
-  QRCODE
-  WEB
-  APP
-  MANUAL
-}
-
-enum StatusResgate {
-  CONFIRMADO
-  RECUSADO
-  ESTORNADO
-}
-
-// ─────────────────────────────────────────
-// SOLICITAÇÕES DE IMPRESSÃO
-// ─────────────────────────────────────────
-
-model SolicitacaoImpressao {
-  id              String            @id @default(cuid())
-  lojaId          String
-  campanhaId      String
-  loteId          String
-  layoutId        String
-  quantidadeCards Int
-  folhasEstimadas Int
-  observacaoLoja  String?           @db.Text
-  status          StatusSolicitacao @default(PENDENTE)
-  observacaoAdmin String?           @db.Text
-  aprovadoPorId   String?
-  aprovadoEm      DateTime?
-
-  // Pagamento
-  valorCobrado             Decimal?  @db.Decimal(10, 2)
-  pixChave                 String?   @db.VarChar(150)
-  pixNome                  String?   @db.VarChar(100)
-  pagamentoConfirmadoPorId String?
-  pagamentoConfirmadoEm    DateTime?
-
-  loja                   Loja      @relation(fields: [lojaId],                    references: [id])
-  campanha               Campanha  @relation(fields: [campanhaId],                references: [id])
-  lote                   LoteChave @relation(fields: [loteId],                    references: [id])
-  layout                 Layout    @relation(fields: [layoutId],                  references: [id])
-  aprovadoPor            User?     @relation("ImpressaoAprovacao",               fields: [aprovadoPorId],            references: [id])
-  pagamentoConfirmadoPor User?     @relation("ImpressaoPagamento",               fields: [pagamentoConfirmadoPorId], references: [id])
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  @@index([lojaId])
-  @@index([campanhaId])
-  @@index([loteId])
-  @@index([layoutId])
-  @@index([aprovadoPorId])
-  @@index([pagamentoConfirmadoPorId])
-  @@index([status])
-  @@map("solicitacoes_impressao")
-}
-
-enum StatusSolicitacao {
-  PENDENTE
-  EM_ANALISE
-  AGUARDANDO_PAGAMENTO
-  APROVADA
-  REJEITADA
-  IMPRESSA
-  ENTREGUE
-}
-
-enum TipoImpressao {
-  PROPRIO
-  ADMIN_COURTESYFY
-}
-
-enum TamanhoCard {
-  MINI
-  CARTAO
-  PADRAO
-  COUPON
-  VOUCHER
-  MEIO_A4
-  MDF
-}
-
-enum EstiloCard {
-  CLASSICO
-  MODERNO
-  MINIMALISTA
-  GRADIENTE
-  NEON
-}
-
-enum TipoEvento {
-  CHAVE_GERADA
-  CHAVE_CONSULTADA
-  CHAVE_ATIVADA
-  CHAVE_RESGATADA
-  CHAVE_EXPIRADA
-  CHAVE_CANCELADA
-  TENTATIVA_INVALIDA
-  TENTATIVA_REUSO
-  RESGATE_RECUSADO
-  CAMPANHA_CRIADA
-  CAMPANHA_ENCERRADA
-  LOTE_GERADO
-  LOTE_EXPORTADO
-  USUARIO_LOGIN
-  USUARIO_LOGOUT
+enum CorTema {
+  AZUL
+  VERDE
+  VERMELHO
+  ROXO
+  LARANJA
 }

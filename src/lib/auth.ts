@@ -1,12 +1,16 @@
-import NextAuth, { DefaultSession, type User } from "next-auth"
+// src/lib/auth.ts
+// Autenticação do Portal Fisioterapia UNIP.
+//
+// Estratégia: JWT. Não há adapter de banco e não há tabela de sessão — a sessão
+// vive assinada no cookie. Isso economiza uma ida ao MySQL por requisição, que é
+// o recurso escasso na hospedagem compartilhada (ver spec/07-portal-spec.md §3.4).
+
+import NextAuth, { type DefaultSession } from "next-auth"
+// O import é o que torna o módulo resolvível para a augmentação logo abaixo.
 import type { JWT } from "next-auth/jwt"
-import prisma from "./prisma"
-import { PrismaAdapter } from "@auth/prisma-adapter"
-import type { Adapter, AdapterUser } from "next-auth/adapters"
-import GitHub from "next-auth/providers/github"
-import Google from "next-auth/providers/google"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
+import prisma from "./prisma"
 
 export const runtime = "nodejs"
 
@@ -14,205 +18,110 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string
-      role: string
-      lojaId: string | null
+      role: "ADMIN" | "ALUNO"
     } & DefaultSession["user"]
+  }
+
+  interface User {
+    role?: "ADMIN" | "ALUNO"
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role?: string
-    lojaId?: string | null
+    id?: string
+    role?: "ADMIN" | "ALUNO"
   }
 }
 
-function customAdapter(p: typeof prisma): Adapter {
-  const baseAdapter = PrismaAdapter(p)
-
-  return {
-    ...baseAdapter,
-
-    async getUserByAccount(account) {
-      const dbAccount = await p.account.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-          },
-        },
-        include: { user: true },
-      })
-
-      if (!dbAccount) return null
-
-      if (!dbAccount.user) {
-        await p.account.delete({
-          where: {
-            provider_providerAccountId: {
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-            },
-          },
-        })
-        return null
-      }
-
-      return dbAccount.user as unknown as AdapterUser
-    },
-
-    async getUserByEmail(email) {
-      const user = await p.user.findUnique({ where: { email } })
-      if (!user) return null
-      return user as unknown as AdapterUser
-    },
-
-    async linkAccount(account) {
-      const existing = await p.account.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider: account.provider,
-            providerAccountId: account.providerAccountId,
-          },
-        },
-      })
-
-      if (existing) return
-
-      await p.account.create({ data: account })
-
-      await p.user.update({
-        where: { id: account.userId },
-        data: { emailVerified: new Date() },
-      })
-    },
-
-    async createSession(session) {
-      return p.session.create({ data: session })
-    },
-
-    async getSessionAndUser(sessionToken) {
-      const result = await p.session.findUnique({
-        where: { sessionToken },
-        include: { user: true },
-      })
-
-      if (!result) return null
-
-      const { user, ...session } = result
-      return { user: user as unknown as AdapterUser, session }
-    },
-
-    async updateSession(session) {
-      return p.session.update({
-        where: { sessionToken: session.sessionToken! },
-        data: session,
-      })
-    },
-
-    async deleteSession(sessionToken) {
-      await p.session.delete({ where: { sessionToken } })
-    },
-  } as Adapter
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  adapter: customAdapter(prisma),
   trustHost: true,
 
   session: {
-    strategy: "database",
-    maxAge: 30 * 24 * 60 * 60,
-    updateAge: 24 * 60 * 60,
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 dias
+    updateAge: 24 * 60 * 60, // renova o token a cada 24h de uso
   },
 
-  cookies: {
-    pkceCodeVerifier: {
-      name: "next-auth.pkce.code_verifier",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
+  pages: {
+    signIn: "/login",
   },
 
   providers: [
-    Google({ allowDangerousEmailAccountLinking: true }),
-    GitHub({ allowDangerousEmailAccountLinking: true }),
     Credentials({
       name: "credentials",
       credentials: {
-        username: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: "E-mail", type: "email" },
+        password: { label: "Senha", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) return null
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.username as string },
+      async authorize(credentials) {
+        const email = String(credentials?.email ?? "").toLowerCase().trim()
+        const senha = String(credentials?.password ?? "")
+
+        if (!email || !senha) return null
+
+        const usuario = await prisma.user.findUnique({ where: { email } })
+
+        // Compara o hash mesmo quando o usuário não existe, para que o tempo de
+        // resposta não revele quais e-mails estão cadastrados.
+        const hashComparacao =
+          usuario?.senha ?? "$2a$12$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalidin"
+        const senhaConfere = await bcrypt.compare(senha, hashComparacao)
+
+        await prisma.loginAttempt.create({
+          data: { email, sucesso: Boolean(usuario && senhaConfere) },
         })
 
-        if (!user || !user.password) return null
+        if (!usuario || !senhaConfere) return null
 
-        if (!user.emailVerified) {
-          throw new Error("EMAIL_NOT_VERIFIED")
-        }
+        // O portão de acesso: conta existe, senha certa, mas o ADMIN ainda não
+        // liberou. Recusamos igual a senha errada — de propósito. Distinguir os
+        // dois casos entregaria a quem tenta adivinhar a informação de quais
+        // e-mails existem no portal.
+        if (!usuario.ativo) return null
 
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        )
-
-        if (!isPasswordValid) return null
+        await prisma.user.update({
+          where: { id: usuario.id },
+          data: { ultimoAcesso: new Date() },
+        })
 
         return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        } as User
+          id: usuario.id,
+          name: usuario.nome,
+          email: usuario.email,
+          role: usuario.role,
+        }
       },
     }),
   ],
 
   callbacks: {
-    async session({ session, user }) {
+    async jwt({ token, user, trigger }) {
+      // No login, copia identidade e papel para dentro do token.
       if (user) {
-        session.user.id = user.id
-
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true, lojaId: true },
-        })
-
-        session.user.role = dbUser?.role ?? "LOJISTA"
-        session.user.lojaId = dbUser?.lojaId ?? null
+        token.id = user.id
+        token.role = user.role
       }
 
+      // Em atualização explícita da sessão, relê o papel do banco: assim uma
+      // promoção ou desativação feita pelo ADMIN não espera 30 dias para valer.
+      if (trigger === "update" && token.id) {
+        const atual = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { role: true, ativo: true },
+        })
+        if (!atual?.ativo) return null
+        token.role = atual.role
+      }
+
+      return token
+    },
+
+    async session({ session, token }) {
+      if (token.id) session.user.id = token.id
+      session.user.role = token.role ?? "ALUNO"
       return session
     },
-
-    async signIn({ user, account }) {
-      if (account?.provider !== "credentials") {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email! },
-        })
-
-        if (existingUser && !existingUser.emailVerified) {
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: { emailVerified: new Date() },
-          })
-        }
-      }
-
-      return true
-    },
-  },
-
-  pages: {
-    signIn: "/login",
   },
 })

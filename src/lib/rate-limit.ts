@@ -1,61 +1,48 @@
-import { Ratelimit } from "@upstash/ratelimit"
-import { redis } from "./upstash"
+// src/lib/rate-limit.ts
+//
+// Limitador de tentativas em memória, por instância de função.
+//
+// LIMITAÇÃO CONHECIDA: em serverless cada instância tem a sua própria memória,
+// então o limite real é "N tentativas por instância", não "N no total". Para o
+// tamanho de uma turma isso basta, e evita depender de um Redis externo. Se um
+// dia o portal abrir para fora, troque por um contador compartilhado
+// (Upstash/Redis) — a assinatura desta função não precisa mudar.
 
-// In-memory fallback used when Upstash is not configured (local dev / tests)
-const store: Record<string, { count: number; resetAt: number }> = {}
+type Registro = { contagem: number; expiraEm: number }
 
-function checkMemory(
-  identifier: string,
-  maxAttempts: number,
-  windowMs: number
-): { allowed: boolean; remaining: number } {
-  const now = Date.now()
-  if (store[identifier] && store[identifier].resetAt < now) {
-    delete store[identifier]
-  }
-  if (!store[identifier]) {
-    store[identifier] = { count: 1, resetAt: now + windowMs }
-    return { allowed: true, remaining: maxAttempts - 1 }
-  }
-  store[identifier].count++
-  return {
-    allowed: store[identifier].count <= maxAttempts,
-    remaining: Math.max(0, maxAttempts - store[identifier].count),
-  }
-}
+const memoria = new Map<string, Registro>()
 
-function msToUpstashDuration(ms: number): `${number} ${"ms" | "s" | "m" | "h" | "d"}` {
-  if (ms % (3_600_000) === 0) return `${ms / 3_600_000} h`
-  if (ms % 60_000 === 0) return `${ms / 60_000} m`
-  if (ms % 1_000 === 0) return `${ms / 1_000} s`
-  return `${ms} ms`
+/** Remove chaves vencidas para a memória não crescer sem limite. */
+function limpar(agora: number) {
+  for (const [chave, registro] of memoria) {
+    if (registro.expiraEm < agora) memoria.delete(chave)
+  }
 }
 
 export async function checkRateLimit(
-  identifier: string,
-  maxAttempts = 5,
-  windowMs = 15 * 60 * 1000
+  identificador: string,
+  maxTentativas = 5,
+  janelaMs = 15 * 60 * 1000
 ): Promise<{ allowed: boolean; remaining: number }> {
-  if (!redis) return checkMemory(identifier, maxAttempts, windowMs)
+  const agora = Date.now()
 
-  try {
-    const limiter = new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(maxAttempts, msToUpstashDuration(windowMs)),
-      prefix: "rl",
-    })
-    const { success, remaining } = await limiter.limit(identifier)
-    return { allowed: success, remaining }
-  } catch {
-    // Fail open: if Redis is unreachable, fall back to in-memory
-    return checkMemory(identifier, maxAttempts, windowMs)
+  if (memoria.size > 500) limpar(agora)
+
+  const registro = memoria.get(identificador)
+
+  if (!registro || registro.expiraEm < agora) {
+    memoria.set(identificador, { contagem: 1, expiraEm: agora + janelaMs })
+    return { allowed: true, remaining: maxTentativas - 1 }
+  }
+
+  registro.contagem++
+
+  return {
+    allowed: registro.contagem <= maxTentativas,
+    remaining: Math.max(0, maxTentativas - registro.contagem),
   }
 }
 
-export async function resetRateLimit(identifier: string): Promise<void> {
-  delete store[identifier]
-  if (redis) {
-    // Upstash sliding window stores two keys per prefix+identifier
-    await redis.del(`rl:${identifier}`)
-  }
+export async function resetRateLimit(identificador: string): Promise<void> {
+  memoria.delete(identificador)
 }

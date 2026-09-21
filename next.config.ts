@@ -27,23 +27,23 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           // Restringe acesso a APIs sensíveis do navegador
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
-          // Content Security Policy — permite Stripe, Cloudinary, Google (OAuth) e Vercel Analytics
+          // Content Security Policy — permite Cloudinary e Vercel Analytics
           {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Scripts: próprios + Stripe + Google (OAuth popup)
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://accounts.google.com",
+              // Scripts: próprios
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com",
               // Estilos: próprios + inline (Tailwind/shadcn gerado)
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               // Fontes
               "font-src 'self' https://fonts.gstatic.com",
-              // Imagens: próprios + Cloudinary + Google avatars + GitHub avatars + data URIs (QR Code)
-              "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
-              // Frames: Stripe (checkout embutido)
-              "frame-src https://js.stripe.com https://hooks.stripe.com",
-              // Conexões de API: próprios + Stripe + Cloudinary + Resend
-              "connect-src 'self' https://api.stripe.com https://api.cloudinary.com https://api.resend.com",
+              // Imagens: próprias + Cloudinary + data URIs
+              "img-src 'self' data: blob: https://res.cloudinary.com",
+              // Nada de iframe de terceiro
+              "frame-src 'none'",
+              // Conexões de API: próprios + Cloudinary
+              "connect-src 'self' https://api.cloudinary.com",
               // Bloqueia tudo que não se enquadrar acima
               "base-uri 'self'",
               "form-action 'self'",

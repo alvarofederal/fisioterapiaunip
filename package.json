@@ -1,22 +1,17 @@
 {
-  "name": "courtesyfy",
-  "version": "1.0.2",
+  "name": "fisioterapiaunip",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "clean": "rimraf .next",
     "dev": "next dev --turbopack",
-    "build:double": "next build && next build",
-    "build": "node scripts/update-version.js && prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "node scripts/update-version.js && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "stripe:listen": "stripe listen --forward-to https://courtesyfy.com.br/api/webhook",
-    "stripe:listen:local": "stripe listen --forward-to localhost:3000/api/webhook",
     "db:seed": "tsx prisma/seed.ts",
     "migrate:status": "npx prisma migrate status",
     "migrate:deploy": "npx prisma migrate deploy",
-    "migrate:resolve-applied": "npx prisma migrate resolve --applied",
     "postinstall": "prisma generate",
-    "populate-slugs": "npx scripts/populate-slugs.ts",
     "patch": "npm version patch",
     "end-sprint": "npm version minor",
     "release": "npm version major",
@@ -25,7 +20,8 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:coverage": "vitest run --coverage",
-    "//cache-buster": "v1"
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
@@ -48,11 +44,8 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-email/components": "^0.5.7",
     "@react-email/render": "^1.4.0",
-    "@stripe/stripe-js": "^8.3.0",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
-    "@upstash/ratelimit": "^2.0.8",
-    "@upstash/redis": "^1.38.0",
     "@vercel/speed-insights": "^1.2.0",
     "bcryptjs": "^3.0.2",
     "canvas-confetti": "^1.9.4",
@@ -79,9 +72,7 @@
     "react-dom": "19.1.0",
     "react-hook-form": "^7.63.0",
     "recharts": "^3.3.0",
-    "resend": "^6.5.2",
     "sonner": "^2.0.7",
-    "stripe": "^19.2.1",
     "tailwind-merge": "^3.3.1",
     "twilio": "^5.10.6",
     "zod": "^3.25.76"
@@ -104,5 +95,6 @@
     "tw-animate-css": "^1.3.8",
     "typescript": "^5",
     "vitest": "^4.1.7"
-  }
+  },
+  "description": "Portal da Turma — Fisioterapia UNIP"
 }

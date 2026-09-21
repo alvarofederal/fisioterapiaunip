@@ -3,11 +3,5 @@
   "installCommand": "npm ci",
   "functions": {
     "app/**/*.js": { "maxDuration": 30 }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/expirar-chaves",
-      "schedule": "0 3 * * *"
-    }
-  ]
+  }
 }
