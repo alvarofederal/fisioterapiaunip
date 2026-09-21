@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { CampoSenha } from "@/components/campo-senha"
 
 export function LoginForm() {
   const router = useRouter()
@@ -60,21 +61,14 @@ export function LoginForm() {
         />
       </div>
 
-      <div>
-        <label htmlFor="password" className="rotulo">
-          Senha
-        </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={dados.password}
-          onChange={(e) => setDados({ ...dados, password: e.target.value })}
-          placeholder="••••••••"
-          className="campo"
-        />
-      </div>
+      <CampoSenha
+        id="password"
+        label="Senha"
+        value={dados.password}
+        onChange={(senha) => setDados({ ...dados, password: senha })}
+        autoComplete="current-password"
+        required
+      />
 
       <button type="submit" disabled={carregando} className="btn-primario mt-1 w-full">
         {carregando && <Loader2 className="size-4 animate-spin" aria-hidden />}
