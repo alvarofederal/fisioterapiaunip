@@ -15,7 +15,18 @@ export default async function LayoutPainel({
   const sessao = await auth()
   if (!sessao?.user) redirect("/login")
 
-  const ehAdmin = sessao.user.role === "ADMIN"
+  // O JWT é stateless: ele continua válido mesmo depois que o ADMIN desativa ou
+  // exclui a conta. Sem esta conferência, quem perdesse o acesso seguiria
+  // navegando até o token expirar — 30 dias. Uma busca por chave primária é
+  // barata e é o que faz "desativar usuário" valer de imediato.
+  const usuarioAtual = await prisma.user.findUnique({
+    where: { id: sessao.user.id },
+    select: { ativo: true, role: true },
+  })
+
+  if (!usuarioAtual?.ativo) redirect("/login?sessao=encerrada")
+
+  const ehAdmin = usuarioAtual.role === "ADMIN"
 
   // Contagem de contas esperando liberação — vira selo no menu para o ADMIN
   // não deixar ninguém parado na porta.
@@ -28,7 +39,7 @@ export default async function LayoutPainel({
       <MenuLateral
         nome={sessao.user.name ?? "Aluno"}
         email={sessao.user.email ?? ""}
-        role={sessao.user.role}
+        role={usuarioAtual.role}
         pendentes={pendentes}
       />
 

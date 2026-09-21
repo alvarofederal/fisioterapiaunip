@@ -10,10 +10,20 @@ export const metadata = { title: "Usuários" }
 
 export default async function PaginaUsuarios() {
   const sessao = await auth()
+  if (!sessao?.user) redirect("/login")
 
   // Segunda barreira: o menu esconde o item, mas a rota precisa se defender
   // sozinha — alguém pode digitar a URL.
-  if (sessao?.user.role !== "ADMIN") redirect("/painel")
+  //
+  // O papel é lido do BANCO, não do token: o JWT guarda o papel de quando a
+  // pessoa entrou, então um admin rebaixado continuaria passando por aqui até
+  // o token expirar. Esta é a tela mais sensível do portal; vale a consulta.
+  const eu = await prisma.user.findUnique({
+    where: { id: sessao.user.id },
+    select: { role: true, ativo: true },
+  })
+
+  if (!eu?.ativo || eu.role !== "ADMIN") redirect("/painel")
 
   const usuarios = await prisma.user.findMany({
     orderBy: [{ ativo: "asc" }, { criadoEm: "desc" }],
