@@ -19,9 +19,15 @@ datasource db {
 /// Conta de acesso ao portal.
 /// `ativo` é o portão: toda conta nasce inativa e só entra depois que o ADMIN libera.
 model User {
-  id           String    @id @default(cuid())
-  nome         String
-  email        String    @unique
+  id    String @id @default(cuid())
+  nome  String
+  email String @unique
+
+  /// Registro Acadêmico (número de matrícula). É por ele que o ADMIN reconhece
+  /// quem é quem na hora de liberar o acesso — nome e e-mail podem ser
+  /// qualquer coisa, o RA não.
+  ra String @unique @db.VarChar(30)
+
   senha        String    @db.VarChar(255) // hash bcrypt — nunca texto puro
   role         Role      @default(ALUNO)
   ativo        Boolean   @default(false)
@@ -88,7 +94,11 @@ model Trabalho {
   descricao String?   @db.Text
   tipo      TipoPost  @default(TRABALHO)
   entregaEm DateTime?
-  publicado Boolean   @default(true)
+
+  /// Arquivado sai do mural mas continua consultável em "Arquivadas".
+  /// Só o ADMIN arquiva, desarquiva e exclui — o aluno apenas lê.
+  arquivado   Boolean   @default(false)
+  arquivadoEm DateTime?
 
   materiaId   String
   materia     Materia @relation(fields: [materiaId], references: [id])
@@ -102,7 +112,7 @@ model Trabalho {
   @@index([materiaId])
   @@index([criadoPorId])
   @@index([entregaEm])
-  @@index([publicado, criadoEm])
+  @@index([arquivado, criadoEm])
   @@map("trabalhos")
 }
 

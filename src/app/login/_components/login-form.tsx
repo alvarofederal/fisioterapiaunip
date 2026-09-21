@@ -25,17 +25,16 @@ export function LoginForm() {
 
       if (!resultado || resultado.error) {
         // Mensagem única de propósito: não revelamos se o e-mail existe nem se a
-        // conta está só aguardando liberação. Ver comentário em src/lib/auth.ts.
+        // conta está apenas aguardando liberação. Ver src/lib/auth.ts.
         toast.error("Não foi possível entrar", {
           description:
-            "E-mail ou senha incorretos — ou sua conta ainda não foi liberada pelo administrador da turma.",
+            "E-mail ou senha incorretos — ou sua conta ainda não foi liberada pelo administrador.",
         })
         setCarregando(false)
         return
       }
 
-      const destino = parametros.get("redirect") ?? "/painel"
-      router.push(destino)
+      router.push(parametros.get("redirect") ?? "/painel")
       router.refresh()
     } catch {
       toast.error("Erro ao entrar. Tente novamente.")
@@ -44,12 +43,9 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={aoEnviar} className="flex flex-col gap-4" noValidate>
+    <form onSubmit={aoEnviar} className="flex flex-col gap-5" noValidate>
       <div>
-        <label
-          htmlFor="email"
-          className="mb-1.5 block text-[13px] font-medium text-[#171717]"
-        >
+        <label htmlFor="email" className="rotulo">
           E-mail
         </label>
         <input
@@ -60,15 +56,12 @@ export function LoginForm() {
           value={dados.email}
           onChange={(e) => setDados({ ...dados, email: e.target.value })}
           placeholder="seu.email@exemplo.com"
-          className="h-10 w-full rounded-md border border-[#e5e5e5] bg-white px-3 text-[14px] text-[#171717] outline-none transition-colors placeholder:text-[#737373] focus:border-[#171717] focus:ring-[3px] focus:ring-black/8"
+          className="campo"
         />
       </div>
 
       <div>
-        <label
-          htmlFor="password"
-          className="mb-1.5 block text-[13px] font-medium text-[#171717]"
-        >
+        <label htmlFor="password" className="rotulo">
           Senha
         </label>
         <input
@@ -79,16 +72,12 @@ export function LoginForm() {
           value={dados.password}
           onChange={(e) => setDados({ ...dados, password: e.target.value })}
           placeholder="••••••••"
-          className="h-10 w-full rounded-md border border-[#e5e5e5] bg-white px-3 text-[14px] text-[#171717] outline-none transition-colors placeholder:text-[#737373] focus:border-[#171717] focus:ring-[3px] focus:ring-black/8"
+          className="campo"
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={carregando}
-        className="mt-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-black px-4 text-[14px] font-medium text-white shadow-sm transition-colors hover:bg-[#262626] disabled:opacity-60"
-      >
-        {carregando && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
+      <button type="submit" disabled={carregando} className="btn-primario mt-1 w-full">
+        {carregando && <Loader2 className="size-4 animate-spin" aria-hidden />}
         {carregando ? "Entrando..." : "Entrar"}
       </button>
     </form>

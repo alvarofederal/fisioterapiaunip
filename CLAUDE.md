@@ -42,6 +42,10 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
    lá e teria destruído dados em produção a cada deploy. Migração é passo deliberado.
 2. **`ativo: false` é o portão de segurança.** Toda conta nova nasce inativa; só o ADMIN
    libera. Nunca crie usuário já ativo fora do seed.
+2b. **O RA identifica o aluno.** É único e obrigatório — é por ele que o ADMIN confere quem é
+   da turma. Nome e e-mail qualquer um inventa.
+2c. **Só o ADMIN escreve.** Criar, editar, arquivar, clonar e excluir trabalho e matéria são
+   exclusivos do ADMIN. Aluno só lê e baixa.
 3. **A sessão é JWT**, sem tabela de sessão. Não reintroduza adapter de banco sem discutir:
    a MySQL é compartilhada e conexão é recurso escasso.
 4. **Toda rota sob `/painel` valida no servidor.** O middleware só confere o cookie —
@@ -52,8 +56,9 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
 7. **Anexo guarda `publicId`** do Cloudinary — sem ele não há como apagar o arquivo remoto.
 8. **Limite de anexo: 4 MB.** Função serverless da Vercel não aceita corpo maior que ~4,5 MB.
 9. **Vocabulário cresce por dado**, em `src/lib/dominio.ts` — nunca por `if/else` nas telas.
-10. **Visual segue o `DESIGN.md`**: tema claro, contêiner definido por borda de 1px `#e5e5e5`,
-    raios de 6/8/12/16/9999px, um acento cromático por componente.
+10. **Visual segue o `DESIGN.md`** (referência Discord): tema escuro `#0e0f2d`, display SEMPRE
+    em caixa alta peso 800, blurple `#5865F2` só em ação primária, raios 12/16/24/9999px,
+    um acento cromático por componente, zero box-shadow.
 
 ---
 
@@ -105,11 +110,12 @@ ADMIN_EMAIL="..." ADMIN_SENHA="..." npm run db:seed   # criar/recuperar admin
 
 ## Estado atual
 
-**Pronto:** limpeza do Courtesyfy, schema novo, login JWT, menu lateral, mural,
-listagem de matérias, trabalhos e usuários.
+**Pronto:** limpeza do Courtesyfy, schema novo (com RA e arquivamento), login JWT testado
+ponta a ponta, identidade visual Discord aplicada no sistema todo, menu lateral responsivo,
+mural, listagens de matérias, trabalhos (com aba Arquivados) e usuários.
 
-**Próximo:** formulários de cadastro (matérias e trabalhos), upload de anexos e as
-ações de liberar/desativar usuário. Ver `spec/07-portal-spec.md` §8.
+**Próximo:** formulários de cadastro (matérias e trabalhos), upload de anexos, ações de
+arquivar/desarquivar/clonar e de liberar/desativar usuário. Ver `spec/07-portal-spec.md` §11.
 
 ---
 

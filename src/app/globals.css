@@ -1,139 +1,174 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
-
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
 /* ═══════════════════════════════════════════════════════════════
-   Fisioterapia UNIP — tokens do design system
-   Base: DESIGN.md (paleta dub.co). Tema claro, contêineres definidos
-   por hairline de 1px, não por sombra.
+   Fisioterapia UNIP — identidade visual
+   Base: DESIGN.md (referência Discord). Tema escuro, sem variante clara:
+   o ambiente azul-noite é o ponto da marca, não uma preferência.
    ═══════════════════════════════════════════════════════════════ */
 
+@theme inline {
+  /* Paleta da marca */
+  --color-blurple: #5865f2;
+  --color-dark-blurple: #3442d9;
+  --color-hover-blurple: #8891f2;
+  --color-spring-green: #57f287;
+  --color-fuchsia: #eb459e;
+  --color-vivid-cerulean: #00b0f4;
+  --color-ember-orange: #fda220;
+  --color-ekko-red: #de2761;
+  --color-snow: #ffffff;
+  --color-not-quite-black: #23272a;
+  --color-dark-charcoal: #2c2f33;
+  --color-fog: #babcd9;
+  --color-greyple: #99aab5;
+  --color-dim-grey: #50555f;
+  --color-cosmic: #0e0f2d;
+
+  /* Mapeamento para os componentes shadcn */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-poppins);
+
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+}
+
 :root {
-  --ash: #e5e5e5;
-  --smoke: #d4d4d4;
-  --paper: #f5f5f5;
-  --charcoal: #171717;
-  --steel: #525252;
-  --fog: #737373;
-  --eletrico: #2563eb;
+  /* Superfícies */
+  --background: #0e0f2d;
+  --foreground: #ffffff;
+  --card: #1a1b3a;
+  --card-foreground: #ffffff;
+  --popover: #23272a;
+  --popover-foreground: #ffffff;
 
-  /* Cores temáticas das matérias */
-  --materia-azul: #2563eb;
-  --materia-verde: #16a34a;
-  --materia-vermelho: #dc2626;
-  --materia-roxo: #7c3aed;
-  --materia-laranja: #ea580c;
+  /* Ação primária — o único elemento saturado do layout */
+  --primary: #5865f2;
+  --primary-foreground: #ffffff;
+
+  --secondary: #23272a;
+  --secondary-foreground: #ffffff;
+
+  --muted: #23272a;
+  --muted-foreground: #babcd9;
+
+  --accent: #2c2f33;
+  --accent-foreground: #ffffff;
+
+  --destructive: #de2761;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(255, 255, 255, 0.10);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #5865f2;
+
+  --radius: 12px;
 }
 
-/* Marca: único lugar onde o gradiente cônico aparece */
-.marca-simbolo {
-  background: conic-gradient(
-    from -81deg,
-    #ff0000, #eab308 99deg, #5cff80 162deg,
-    #00fff9 216deg, #3a8bfd 288deg, #855afc
-  );
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Foco sempre visível — obrigação, não enfeite */
+  :focus-visible {
+    outline: 2px solid var(--color-blurple);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-blurple);
+    color: #ffffff;
+  }
 }
 
-/* Padrão de pontos — textura de fundo das telas públicas */
-.fundo-pontilhado {
-  background-image: radial-gradient(circle at 1px 1px, rgba(23, 23, 23, 0.11) 1px, transparent 0);
-  background-size: 22px 22px;
+/* ── Tipografia de display ─────────────────────────────────────
+   Caixa alta + peso 800 + tracking negativo. Segundo o DESIGN.md
+   essa combinação é inseparável da identidade: nunca em caixa mista. */
+.titulo-display {
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.92;
+  color: #ffffff;
 }
 
-/* Filete colorido do card de matéria */
+/* ── Ambiente ──────────────────────────────────────────────────
+   A profundidade vem de contraste de cor, não de sombra. */
+.ceu-estrelado {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -10%, rgba(88, 101, 242, 0.28), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 85% 20%, rgba(235, 69, 158, 0.12), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 10% 60%, rgba(0, 176, 244, 0.10), transparent 70%);
+}
+
+.malha-estrelas {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.16) 1px, transparent 0);
+  background-size: 32px 32px;
+}
+
+/* ── Painéis de seção ──────────────────────────────────────────
+   Cada painel é um palco com a própria iluminação. */
+.painel-recurso {
+  border-radius: 24px;
+  padding: 32px;
+}
+
+/* Filete colorido da matéria no card */
 .acento-lateral::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--acento, var(--eletrico));
+  top: 16px;
+  bottom: 16px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--acento, var(--color-blurple));
+}
+
+/* Barra de rolagem combinando com o ambiente */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 104px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -141,4 +176,79 @@
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ── Campos de formulário ──────────────────────────────────────
+   Borda sutil em repouso; no foco, o blurple assume. */
+.campo {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  font-size: 15px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.campo::placeholder {
+  color: #99aab5;
+}
+.campo:focus {
+  outline: none;
+  border-color: #5865f2;
+  box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.25);
+}
+.campo[aria-invalid="true"] {
+  border-color: #de2761;
+}
+.campo[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(222, 39, 97, 0.25);
+}
+
+textarea.campo {
+  height: auto;
+  min-height: 120px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+select.campo {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23babcd9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.rotulo {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+/* Botão primário — o único elemento saturado por superfície */
+.btn-primario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  background: #5865f2;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 14px 24px;
+  transition: background-color 160ms ease;
+}
+.btn-primario:hover:not(:disabled) {
+  background: #3442d9;
+}
+.btn-primario:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

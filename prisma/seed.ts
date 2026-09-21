@@ -2,7 +2,7 @@
  * Cria (ou promove) a conta de administrador do portal.
  *
  * Uso:
- *   ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA="UmaSenhaForte1" npm run db:seed
+ *   ADMIN_EMAIL=voce@exemplo.com ADMIN_SENHA="UmaSenhaForte1" ADMIN_RA="123456" npm run db:seed
  *
  * É idempotente: rodar de novo não duplica nada. Se a conta já existir, ela é
  * promovida a ADMIN e ativada — útil para recuperar acesso sem mexer no banco
@@ -17,6 +17,7 @@ async function main() {
   const email = process.env.ADMIN_EMAIL?.toLowerCase().trim()
   const senha = process.env.ADMIN_SENHA
   const nome = process.env.ADMIN_NOME ?? "Administrador"
+  const ra = process.env.ADMIN_RA ?? "ADMIN"
 
   if (!email || !senha) {
     console.error("\n✖ Faltam variáveis de ambiente.\n")
@@ -34,7 +35,7 @@ async function main() {
   const admin = await prisma.user.upsert({
     where: { email },
     update: { role: "ADMIN", ativo: true, senha: senhaHash },
-    create: { nome, email, senha: senhaHash, role: "ADMIN", ativo: true },
+    create: { nome, ra, email, senha: senhaHash, role: "ADMIN", ativo: true },
   })
 
   console.log(`\n✔ Administrador pronto: ${admin.email}`)

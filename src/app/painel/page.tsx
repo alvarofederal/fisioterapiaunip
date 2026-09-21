@@ -9,13 +9,14 @@ export const metadata = { title: "Início" }
 export default async function MuralDaTurma() {
   const sessao = await auth()
   const ehAdmin = sessao?.user.role === "ADMIN"
+  const primeiroNome = (sessao?.user.name ?? "").split(" ")[0]
 
   const [trabalhos, totalMaterias] = await Promise.all([
     prisma.trabalho.findMany({
-      where: { publicado: true },
+      where: { arquivado: false },
       include: { materia: true, _count: { select: { anexos: true } } },
-      orderBy: [{ criadoEm: "desc" }],
-      take: 30,
+      orderBy: { criadoEm: "desc" },
+      take: 40,
     }),
     prisma.materia.count({ where: { arquivada: false } }),
   ])
@@ -27,44 +28,34 @@ export default async function MuralDaTurma() {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="text-[24px] font-medium tracking-[-0.01em] text-[#171717]">
-          Mural da turma
+        <h1 className="titulo-display text-[30px] md:text-[38px]">
+          {primeiroNome ? `E aí, ${primeiroNome}` : "Mural da turma"}
         </h1>
-        <p className="mt-1 text-[14px] text-[#737373]">
-          Tudo o que foi publicado, do mais recente para o mais antigo.
+        <p className="mt-2 text-[15px] text-fog">
+          Tudo o que a turma precisa saber, do mais recente para o mais antigo.
         </p>
       </header>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Resumo
-          icone={ClipboardList}
-          rotulo="Publicações"
-          valor={trabalhos.length}
-          destaque
-        />
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Resumo icone={ClipboardList} rotulo="No mural" valor={trabalhos.length} destaque />
         <Resumo icone={CalendarClock} rotulo="Entregas a vencer" valor={aVencer} />
-        <Resumo icone={BookOpen} rotulo="Matérias ativas" valor={totalMaterias} />
+        <Resumo icone={BookOpen} rotulo="Matérias" valor={totalMaterias} />
       </section>
 
       <section className="flex flex-col gap-4">
         {trabalhos.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-[#d4d4d4] bg-[#f5f5f5] px-6 py-14 text-center">
-            <span className="grid h-12 w-12 place-items-center rounded-xl border border-[#e5e5e5] bg-white text-[#737373]">
-              <ClipboardList size={22} aria-hidden />
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
+            <span className="grid size-14 place-items-center rounded-2xl bg-blurple/15 text-hover-blurple">
+              <ClipboardList size={26} aria-hidden />
             </span>
-            <h2 className="text-[16px] font-semibold text-[#171717]">
-              Nada publicado ainda
-            </h2>
-            <p className="max-w-[420px] text-[14px] text-[#525252]">
+            <h2 className="titulo-display text-[22px]">Mural vazio</h2>
+            <p className="max-w-[460px] text-[15px] leading-relaxed text-fog">
               {ehAdmin
-                ? "Cadastre a primeira matéria e depois publique um trabalho ou evento para a turma."
+                ? "Cadastre a primeira matéria e publique um trabalho para a turma começar a usar."
                 : "Assim que o administrador publicar um trabalho ou evento, ele aparece aqui."}
             </p>
             {ehAdmin && (
-              <Link
-                href="/painel/materias"
-                className="mt-2 inline-flex h-10 items-center rounded-lg bg-black px-4 text-[14px] font-medium text-white transition-colors hover:bg-[#262626]"
-              >
+              <Link href="/painel/materias" className="btn-primario mt-1">
                 Começar pelas matérias
               </Link>
             )}
@@ -91,14 +82,14 @@ function Resumo({
   destaque?: boolean
 }) {
   return (
-    <article className="flex flex-col gap-1 rounded-xl border border-[#e5e5e5] bg-white p-4">
-      <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.08em] text-[#737373]">
+    <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-greyple">
         <Icone size={13} aria-hidden />
         {rotulo}
       </div>
       <p
-        className={`text-[30px] font-medium leading-tight tracking-[-0.02em] tabular-nums ${
-          destaque ? "text-[#2563eb]" : "text-[#171717]"
+        className={`titulo-display text-[34px] tabular-nums ${
+          destaque ? "text-hover-blurple" : ""
         }`}
       >
         {valor}

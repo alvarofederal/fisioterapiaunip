@@ -16,7 +16,16 @@ const emailSchema = z
   .toLowerCase()
   .trim()
 
+/** RA = Registro Acadêmico. Só dígitos, para o admin poder conferir na lista da turma. */
+const raSchema = z
+  .string()
+  .trim()
+  .min(4, "RA muito curto")
+  .max(30, "RA muito longo")
+  .regex(/^[0-9A-Za-z.-]+$/, "O RA aceita apenas números, letras, ponto e hífen")
+
 export const registerSchema = z.object({
+  ra: raSchema,
   nome: z
     .string()
     .trim()

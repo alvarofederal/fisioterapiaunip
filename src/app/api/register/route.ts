@@ -37,12 +37,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { nome, email, password } = validacao.data
+    const { ra, nome, email, password } = validacao.data
 
-    const jaExiste = await prisma.user.findUnique({ where: { email } })
+    const jaExiste = await prisma.user.findFirst({
+      where: { OR: [{ email }, { ra }] },
+      select: { email: true, ra: true },
+    })
+
     if (jaExiste) {
       return NextResponse.json(
-        { error: "Este e-mail já está cadastrado." },
+        {
+          error:
+            jaExiste.email === email
+              ? "Este e-mail já está cadastrado."
+              : "Este RA já está cadastrado. Se não foi você, fale com o administrador da turma.",
+        },
         { status: 400 }
       )
     }
@@ -55,6 +64,7 @@ export async function POST(request: NextRequest) {
 
     await prisma.user.create({
       data: {
+        ra,
         nome,
         email,
         senha: senhaHash,
@@ -63,10 +73,21 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Quem o aluno procura se a liberação demorar. Vem do banco: nenhum
+    // contato fica escrito no código.
+    const admin = portalVazio
+      ? null
+      : await prisma.user.findFirst({
+          where: { role: "ADMIN", ativo: true },
+          select: { nome: true, email: true },
+          orderBy: { criadoEm: "asc" },
+        })
+
     return NextResponse.json(
       {
         success: true,
         primeiroAcesso: portalVazio,
+        admin,
         message: portalVazio
           ? "Conta de administrador criada! Você já pode entrar."
           : "Conta criada! Aguarde a liberação do administrador da turma.",
