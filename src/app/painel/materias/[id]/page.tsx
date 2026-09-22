@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { ArrowLeft, User2, Layers, Printer, GraduationCap } from "lucide-react"
 import prisma from "@/lib/prisma"
-import { auth } from "@/lib/auth"
 import {
   CORES_MATERIA,
   ROTULO_DIA,
@@ -14,6 +13,7 @@ import {
   PROGRESSO_VAZIO,
   type UnidadeComProgresso,
 } from "@/lib/unidades"
+import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { PainelUnidade } from "./_components/painel-unidade"
 import { DialogoUnidade } from "./_components/dialogo-unidade"
 
@@ -24,15 +24,11 @@ export default async function PaginaMateria({
 }: {
   params: Promise<{ id: string }>
 }) {
-  const sessao = await auth()
-  if (!sessao?.user?.id) redirect("/login")
+  const { usuarioId, ehAdmin } = await exigirRotaLiberada("menu_materias")
 
   const { id } = await params
-  const usuarioId = sessao.user.id
 
-  const [eu, materia] = await Promise.all([
-    prisma.user.findUnique({ where: { id: usuarioId }, select: { role: true } }),
-    prisma.materia.findUnique({
+  const materia = await prisma.materia.findUnique({
       where: { id },
       include: {
         semestre: { select: { ano: true, periodo: true } },
@@ -49,12 +45,10 @@ export default async function PaginaMateria({
           },
         },
       },
-    }),
-  ])
+  })
 
   if (!materia) notFound()
 
-  const ehAdmin = eu?.role === "ADMIN"
   const tema = CORES_MATERIA[materia.cor]
 
   const unidades: UnidadeComProgresso[] = materia.unidades.map((u) => ({

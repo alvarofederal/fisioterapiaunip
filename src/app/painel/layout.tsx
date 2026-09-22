@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import { lerConfiguracoes } from "@/lib/configuracoes-servidor"
 import { MenuLateral } from "./_components/menu-lateral"
 
 /**
@@ -34,6 +35,8 @@ export default async function LayoutPainel({
     ? await prisma.user.count({ where: { ativo: false } }).catch(() => 0)
     : 0
 
+  const ligadas = await lerConfiguracoes()
+
   return (
     <div className="min-h-screen bg-[#0e0f2d]">
       <MenuLateral
@@ -41,6 +44,7 @@ export default async function LayoutPainel({
         email={sessao.user.email ?? ""}
         role={usuarioAtual.role}
         pendentes={pendentes}
+        ligadas={ligadas}
       />
 
       <div className="lg:pl-[260px]">

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { ORDEM_TIPOS_ATIVIDADE, TIPOS_ATIVIDADE } from "@/lib/dominio"
 import { separarAtividades, usaCarimbo, TRABALHO_SEM_MARCO } from "@/lib/atividades"
 import { MarcosDoTrabalho } from "../_components/marcos-trabalho"
+import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import type { TipoAtividade } from "@/generated/prisma"
 import { CardAtividade, type AtividadeDoMural } from "../_components/card-atividade"
 import { DialogoAtividade } from "./_components/dialogo-atividade"
@@ -21,15 +22,13 @@ export default async function PaginaAtividades({
 }: {
   searchParams: Promise<{ tipo?: string; arquivadas?: string }>
 }) {
-  const sessao = await auth()
-  if (!sessao?.user?.id) redirect("/login")
+  const { usuarioId, ehAdmin } = await exigirRotaLiberada("menu_atividades")
 
   const { tipo: tipoBruto, arquivadas } = await searchParams
   const tipoFiltro = tipoBruto && TIPOS_VALIDOS.has(tipoBruto) ? (tipoBruto as TipoAtividade) : null
   const vendoArquivadas = arquivadas === "1"
 
-  const [eu, materias, atividades, contagens, totalArquivadas] = await Promise.all([
-    prisma.user.findUnique({ where: { id: sessao.user.id }, select: { role: true } }),
+  const [materias, atividades, contagens, totalArquivadas] = await Promise.all([
     prisma.materia.findMany({
       where: { arquivada: false },
       select: { id: true, nome: true },
@@ -44,7 +43,7 @@ export default async function PaginaAtividades({
         materia: { select: { id: true, nome: true, cor: true, modalidade: true } },
         anexos: true,
         // Só o progresso de quem está lendo: a folha é de cada um.
-        progressos: { where: { usuarioId: sessao.user.id } },
+        progressos: { where: { usuarioId } },
       },
     }),
     prisma.atividade.groupBy({
@@ -55,7 +54,6 @@ export default async function PaginaAtividades({
     prisma.atividade.count({ where: { arquivada: true } }),
   ])
 
-  const ehAdmin = eu?.role === "ADMIN"
   const totalAtivas = contagens.reduce((soma, linha) => soma + linha._count, 0)
   const contagemPorTipo = new Map(contagens.map((c) => [c.tipo, c._count]))
 

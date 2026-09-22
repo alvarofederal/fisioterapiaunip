@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
+import { configuracaoLigada } from "@/lib/configuracoes-servidor"
 import { RegisterForm } from "./_components/register-form"
 import { MarcaFisio } from "@/components/marca-fisio"
 
@@ -9,6 +10,10 @@ export const metadata = { title: "Criar conta" }
 export default async function PaginaCadastro() {
   const sessao = await auth()
   if (sessao?.user) redirect("/painel")
+
+  // A rota some junto com a opção. A API de cadastro também recusa — esta
+  // checagem é o aviso, não a tranca.
+  if (!(await configuracaoLigada("cadastro_aberto"))) redirect("/login?cadastro=fechado")
 
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[#0e0f2d] px-5 py-12">

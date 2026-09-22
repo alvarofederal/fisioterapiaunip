@@ -1,6 +1,7 @@
 export const runtime = "nodejs"
 
 import { NextRequest, NextResponse } from "next/server"
+import { configuracaoLigada } from "@/lib/configuracoes-servidor"
 import bcrypt from "bcryptjs"
 import prisma from "@/lib/prisma"
 import { registerSchema } from "@/lib/validators/auth"
@@ -13,6 +14,12 @@ import { checkRateLimit } from "@/lib/rate-limit"
  * de Usuários. É isso que impede que alguém de fora da turma entre no portal.
  */
 export async function POST(request: NextRequest) {
+  // A tranca fica aqui, não na página: a rota aceita POST direto, sem
+  // passar pela tela de cadastro.
+  if (!(await configuracaoLigada("cadastro_aberto"))) {
+    return NextResponse.json({ error: "Cadastro fechado no momento." }, { status: 403 })
+  }
+
   try {
     const ip =
       request.headers.get("x-forwarded-for") ||

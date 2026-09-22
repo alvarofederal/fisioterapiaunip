@@ -1,8 +1,7 @@
 import Link from "next/link"
-import { redirect } from "next/navigation"
 import { CalendarDays, Target, ChevronDown, Users, CircleSlash } from "lucide-react"
 import prisma from "@/lib/prisma"
-import { auth } from "@/lib/auth"
+import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { cn } from "@/lib/utils"
 import { CORES_MATERIA } from "@/lib/dominio"
 import { agruparCronograma } from "@/lib/cronograma"
@@ -16,13 +15,11 @@ export default async function PaginaCronograma({
 }: {
   searchParams: Promise<{ materia?: string }>
 }) {
-  const sessao = await auth()
-  if (!sessao?.user?.id) redirect("/login")
+  const { usuarioId, ehAdmin } = await exigirRotaLiberada("menu_cronograma")
 
   const { materia: materiaFiltro } = await searchParams
 
-  const [eu, materias, aulas] = await Promise.all([
-    prisma.user.findUnique({ where: { id: sessao.user.id }, select: { role: true } }),
+  const [materias, aulas] = await Promise.all([
     prisma.materia.findMany({
       where: { arquivada: false },
       select: { id: true, nome: true, cor: true, modalidade: true },
@@ -35,7 +32,7 @@ export default async function PaginaCronograma({
       include: {
         materia: { select: { id: true, nome: true, cor: true, professor: true } },
         estudos: {
-          where: { usuarioId: sessao.user.id },
+          where: { usuarioId },
           select: { status: true, anotacoes: true },
         },
       },
@@ -43,7 +40,6 @@ export default async function PaginaCronograma({
     }),
   ])
 
-  const ehAdmin = eu?.role === "ADMIN"
   const materiasPresenciais = materias.filter((m) => m.modalidade === "PRESENCIAL")
 
   const todas: AulaDoCronograma[] = aulas.map((aula) => ({

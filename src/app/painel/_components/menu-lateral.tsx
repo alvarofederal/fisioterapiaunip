@@ -4,7 +4,18 @@ import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { Home, BookOpen, CalendarDays, ListChecks, Users, LogOut, Menu, X } from "lucide-react"
+import {
+  Home,
+  BookOpen,
+  CalendarDays,
+  ListChecks,
+  Users,
+  SlidersHorizontal,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react"
+import type { ChaveConfiguracao } from "@/lib/configuracoes"
 import { cn } from "@/lib/utils"
 import { MarcaFisio } from "@/components/marca-fisio"
 import { Avatar, AvatarFallback, AvatarBadge } from "@/components/ui/avatar"
@@ -24,10 +35,27 @@ const ITENS = [
     rotulo: "Matérias",
     rotuloAluno: "Meus estudos",
     icone: BookOpen,
+    chave: "menu_materias",
   },
-  { href: "/painel/cronograma", rotulo: "Cronograma", icone: CalendarDays },
-  { href: "/painel/atividades", rotulo: "Atividades", icone: ListChecks },
+  {
+    href: "/painel/cronograma",
+    rotulo: "Cronograma",
+    icone: CalendarDays,
+    chave: "menu_cronograma",
+  },
+  {
+    href: "/painel/atividades",
+    rotulo: "Atividades",
+    icone: ListChecks,
+    chave: "menu_atividades",
+  },
   { href: "/painel/usuarios", rotulo: "Usuários", icone: Users, somenteAdmin: true },
+  {
+    href: "/painel/configuracoes",
+    rotulo: "Configurações",
+    icone: SlidersHorizontal,
+    somenteAdmin: true,
+  },
 ] as const
 
 export function MenuLateral({
@@ -35,18 +63,27 @@ export function MenuLateral({
   email,
   role,
   pendentes,
+  ligadas,
 }: {
   nome: string
   email: string
   role: Papel
   pendentes: number
+  /** O que o ADMIN deixou ligado. Ele mesmo continua vendo tudo. */
+  ligadas: Record<ChaveConfiguracao, boolean>
 }) {
   const caminho = usePathname()
   const [aberto, setAberto] = useState(false)
 
-  const itens = ITENS.filter(
-    (item) => !("somenteAdmin" in item && item.somenteAdmin) || role === "ADMIN"
-  )
+  const itens = ITENS.filter((item) => {
+    if ("somenteAdmin" in item && item.somenteAdmin) return role === "ADMIN"
+
+    // Chave desligada some do menu do aluno. O ADMIN continua enxergando —
+    // senão ele desligaria uma opção e perderia o caminho de volta.
+    if (role !== "ADMIN" && "chave" in item && !ligadas[item.chave]) return false
+
+    return true
+  })
 
   const conteudo = (
     <div className="flex h-full flex-col bg-[#23272a]">

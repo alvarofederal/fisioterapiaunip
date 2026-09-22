@@ -312,66 +312,6 @@ select.campo {
   }
 }
 
-/* ─── Editor de resumo (CKEditor) ──────────────────────────────────
-   O CKEditor traz tema claro. Aqui ele é vestido com as variáveis do
-   DESIGN.md para não virar uma janela branca no meio do tema escuro.
-   Usa as próprias variáveis do editor, não !important em regra interna,
-   porque é o que a biblioteca declara como ponto de extensão.           */
-.editor-resumo {
-  --ck-color-base-background: #1a1b3a;
-  --ck-color-base-foreground: #23272a;
-  --ck-color-base-border: rgba(255, 255, 255, 0.12);
-  --ck-color-base-text: #ffffff;
-  --ck-color-text: #ffffff;
-  --ck-color-toolbar-background: #23272a;
-  --ck-color-toolbar-border: rgba(255, 255, 255, 0.12);
-  --ck-color-button-default-background: transparent;
-  --ck-color-button-default-hover-background: rgba(255, 255, 255, 0.08);
-  --ck-color-button-on-background: rgba(88, 101, 242, 0.22);
-  --ck-color-button-on-color: #8891f2;
-  --ck-color-button-on-hover-background: rgba(88, 101, 242, 0.3);
-  --ck-color-focus-border: #5865f2;
-  --ck-color-dropdown-panel-background: #23272a;
-  --ck-color-dropdown-panel-border: rgba(255, 255, 255, 0.12);
-  --ck-color-list-background: #23272a;
-  --ck-color-list-button-hover-background: rgba(255, 255, 255, 0.08);
-  --ck-color-list-button-on-background: rgba(88, 101, 242, 0.22);
-  --ck-color-list-button-on-text: #8891f2;
-  --ck-color-panel-background: #23272a;
-  --ck-color-panel-border: rgba(255, 255, 255, 0.12);
-  --ck-color-input-background: #1a1b3a;
-  --ck-color-input-border: rgba(255, 255, 255, 0.12);
-  --ck-color-input-text: #ffffff;
-  --ck-color-labeled-field-label-background: #1a1b3a;
-  --ck-border-radius: 12px;
-}
-
-/* "O maior tamanho possível": a área de escrita ocupa a altura da janela
-   menos a barra de ferramentas, e cresce se o texto passar disso. */
-.editor-resumo .ck-editor__editable {
-  min-height: 60vh;
-  max-height: none;
-  color: #ffffff;
-}
-.editor-resumo .ck-editor__editable_inline {
-  padding: 20px 22px;
-}
-.editor-resumo .ck.ck-toolbar {
-  border-radius: 12px 12px 0 0;
-}
-.editor-resumo .ck.ck-editor__main > .ck-editor__editable {
-  border-radius: 0 0 12px 12px;
-  background: #1a1b3a;
-}
-.editor-resumo .ck.ck-editor__editable.ck-focused {
-  border-color: #5865f2;
-  box-shadow: none;
-}
-.editor-resumo .ck.ck-placeholder::before,
-.editor-resumo .ck .ck-placeholder::before {
-  color: #99aab5;
-}
-
 /* ─── Conteúdo do resumo já gravado ────────────────────────────────
    O HTML vem do editor, então precisa dos estilos de bloco que o reset
    do Tailwind zera. Escopo fechado em .conteudo-rico para não vazar.    */
@@ -513,4 +453,64 @@ select.campo {
     break-inside: avoid;
     page-break-inside: avoid;
   }
+}
+
+/* ─── Editor de resumo (Tiptap) ────────────────────────────────────
+   O editor é headless: nada aqui sobrescreve estilo de biblioteca, é a
+   folha do próprio portal desenhando a área de escrita.
+
+   A área editável recebe .conteudo-rico — a MESMA classe da tela de
+   leitura e da folha de impressão. É isso que faz o texto sair igual ao
+   que foi digitado: não são dois estilos parecidos, é um só.         */
+.editor-resumo .area-edicao {
+  min-height: 60vh;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 0;
+  border-radius: 0 0 12px 12px;
+  background: #1a1b3a;
+  padding: 20px 22px;
+  outline: none;
+  overflow-wrap: break-word;
+}
+.editor-resumo .area-edicao:focus {
+  border-color: #5865f2;
+}
+
+/* Placeholder do parágrafo vazio, quando o resumo ainda não começou. */
+.editor-resumo .area-edicao p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #99aab5;
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Imagem e tabela selecionadas precisam de um sinal visível de seleção. */
+.editor-resumo .area-edicao .ProseMirror-selectednode {
+  outline: 2px solid #5865f2;
+  border-radius: 8px;
+}
+.editor-resumo .area-edicao .selectedCell::after {
+  background: rgba(88, 101, 242, 0.2);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+.editor-resumo .area-edicao .column-resize-handle {
+  background: #5865f2;
+  bottom: -2px;
+  position: absolute;
+  right: -2px;
+  top: 0;
+  width: 3px;
+  pointer-events: none;
+}
+.editor-resumo .area-edicao table {
+  position: relative;
+}
+.editor-resumo .area-edicao td,
+.editor-resumo .area-edicao th {
+  position: relative;
 }

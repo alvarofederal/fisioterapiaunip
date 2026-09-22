@@ -31,18 +31,45 @@ const OPCOES: sanitizeHtml.IOptions = {
     "blockquote", "pre", "code",
     "a",
     "figure", "figcaption", "img",
-    "table", "thead", "tbody", "tr", "th", "td",
+    "table", "thead", "tbody", "tr", "th", "td", "colgroup", "col",
     "hr", "sub", "sup", "span", "div",
   ],
 
   allowedAttributes: {
-    // `class` é o que o CKEditor usa para alinhar imagem e marcar tabela.
-    // `style` fica de fora: abre espaço para CSS arbitrário por cima da tela.
-    "*": ["class"],
+    // `class` carrega o alinhamento de imagem e a marcação de tabela do editor.
+    //
+    // `style` entra aqui porque, sem ele na lista, o atributo é descartado
+    // antes de `allowedStyles` ser consultado — e o alinhamento nunca chegaria
+    // à tela. É `allowedStyles` que torna isso seguro: o atributo sobrevive,
+    // mas só com as propriedades e os formatos declarados logo abaixo.
+    "*": ["class", "style"],
     a: ["href", "target", "rel"],
     img: ["src", "alt", "width", "height"],
-    td: ["colspan", "rowspan"],
-    th: ["colspan", "rowspan"],
+    td: ["colspan", "rowspan", "colwidth"],
+    th: ["colspan", "rowspan", "colwidth"],
+  },
+
+  /**
+   * O único `style` que sobrevive, e só nestes formatos.
+   *
+   * Sem isto, alinhar um parágrafo ou ajustar a largura de uma coluna não
+   * aparecia na leitura: o aluno formatava e o resultado saía diferente do
+   * que ele viu escrevendo. Liberar `style` inteiro também resolveria, e
+   * abriria CSS arbitrário por cima da tela — um `position: fixed` cobrindo o
+   * portal com o que o atacante quisesse.
+   */
+  allowedStyles: {
+    "*": {
+      "text-align": [/^(left|right|center|justify)$/],
+    },
+    img: {
+      width: [/^\d{1,3}(\.\d+)?%$/, /^\d{1,4}px$/],
+      height: [/^auto$/, /^\d{1,4}px$/],
+    },
+    col: {
+      width: [/^\d{1,4}px$/],
+      "min-width": [/^\d{1,4}px$/],
+    },
   },
 
   // Sem isto, `javascript:` e `data:` viram vetor de execução pelo href.

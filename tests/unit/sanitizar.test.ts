@@ -134,3 +134,52 @@ describe("sanitizarHtml — saída real do CKEditor", () => {
     expect(limpo).toContain('rel="noopener noreferrer"')
   })
 })
+
+describe("sanitizarHtml — fidelidade do que foi editado", () => {
+  it("preserva o alinhamento de parágrafo", () => {
+    // Sem isto o aluno centraliza um título e ele volta à esquerda na leitura.
+    const limpo = sanitizarHtml('<p style="text-align: center">Centralizado</p>')
+    expect(limpo).toContain("text-align")
+    expect(limpo).toContain("center")
+  })
+
+  it("preserva a largura da imagem redimensionada", () => {
+    const limpo = sanitizarHtml('<img src="https://res.cloudinary.com/a.png" style="width: 40%">')
+    expect(limpo).toContain("width")
+    expect(limpo).toContain("40%")
+  })
+
+  it("preserva a largura de coluna da tabela", () => {
+    const limpo = sanitizarHtml(
+      '<table><colgroup><col style="min-width: 120px"></colgroup>' +
+        "<tbody><tr><td>A</td></tr></tbody></table>"
+    )
+    expect(limpo).toContain("colgroup")
+    expect(limpo).toContain("120px")
+  })
+
+  it("descarta propriedade de CSS fora da lista, mesmo junto de uma válida", () => {
+    // O ataque real: esconder position:fixed atrás de um text-align inocente.
+    const limpo = sanitizarHtml(
+      '<p style="text-align: center; position: fixed; inset: 0; z-index: 9999">x</p>'
+    )
+    expect(limpo).toContain("text-align")
+    expect(limpo).not.toContain("position")
+    expect(limpo).not.toContain("z-index")
+    expect(limpo).not.toContain("inset")
+  })
+
+  it("descarta valor fora do formato esperado", () => {
+    expect(sanitizarHtml('<p style="text-align: url(javascript:alert(1))">x</p>')).not.toContain(
+      "javascript"
+    )
+    expect(sanitizarHtml('<img src="https://a/b.png" style="width: expression(alert(1))">'))
+      .not.toContain("expression")
+  })
+
+  it("não deixa style passar em elemento que não o declara", () => {
+    // `width` só é permitido em img e col; num div viraria caixa arbitrária.
+    const limpo = sanitizarHtml('<div style="width: 100px">x</div>')
+    expect(limpo).not.toContain("width")
+  })
+})

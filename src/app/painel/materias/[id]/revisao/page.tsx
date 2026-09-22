@@ -1,10 +1,11 @@
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { rotuloSemestre } from "@/lib/dominio"
 import { anotacoesParaRevisao, PROGRESSO_VAZIO, type UnidadeComProgresso } from "@/lib/unidades"
+import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { BotaoImprimir } from "./_components/botao-imprimir"
 
 export const metadata = { title: "Revisão" }
@@ -21,11 +22,11 @@ export default async function PaginaRevisao({
 }: {
   params: Promise<{ id: string }>
 }) {
+  const { usuarioId } = await exigirRotaLiberada("menu_materias")
   const sessao = await auth()
-  if (!sessao?.user?.id) redirect("/login")
+  const nomeDoAluno = (sessao?.user?.name ?? "").trim()
 
   const { id } = await params
-  const usuarioId = sessao.user.id
 
   const materia = await prisma.materia.findUnique({
     where: { id },
@@ -61,7 +62,7 @@ export default async function PaginaRevisao({
   }))
 
   const linhas = anotacoesParaRevisao(unidades)
-  const nome = (sessao.user.name ?? "").trim()
+  const nome = nomeDoAluno
 
   return (
     <div className="flex flex-col gap-6">

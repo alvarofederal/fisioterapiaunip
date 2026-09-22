@@ -3,7 +3,9 @@ import { Newspaper, Lock } from "lucide-react"
 import { BarraPublica } from "@/components/barra-publica"
 import { CardNoticia } from "@/components/card-noticia"
 import { MarcaFisio } from "@/components/marca-fisio"
+import { notFound } from "next/navigation"
 import { buscarNoticias } from "@/lib/noticias"
+import { configuracaoLigada } from "@/lib/configuracoes-servidor"
 
 export const metadata = {
   title: "Notícias da turma",
@@ -14,6 +16,10 @@ export const metadata = {
 export const dynamic = "force-dynamic"
 
 export default async function PaginaNoticias() {
+  // Desligada, a vitrine deixa de existir para quem está de fora — nem uma
+  // página vazia, que já entregaria que a turma usa o portal.
+  if (!(await configuracaoLigada("noticias_publicas"))) notFound()
+
   const { proximas, passadas } = await buscarNoticias()
 
   return (

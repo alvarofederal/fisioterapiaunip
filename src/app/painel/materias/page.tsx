@@ -10,6 +10,7 @@ import {
   ROTULO_MODALIDADE,
   rotuloSemestre,
 } from "@/lib/dominio"
+import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { DialogoMateria, type SemestreOpcao } from "./_components/dialogo-materia"
 import { DialogoSemestre } from "./_components/dialogo-semestre"
 import { AcoesMateria } from "./_components/acoes-materia"
@@ -32,18 +33,12 @@ export default async function PaginaMaterias({
 }: {
   searchParams: Promise<{ arquivadas?: string }>
 }) {
-  const sessao = await auth()
+  // Recusa o acesso direto quando o ADMIN desligou a opção; o papel vem do
+  // banco, não do token.
+  const { ehAdmin } = await exigirRotaLiberada("menu_materias")
+
   const { arquivadas } = await searchParams
   const vendoArquivadas = arquivadas === "1"
-
-  // O papel vem do banco, não do token — ver src/lib/autorizacao.ts.
-  const eu = sessao?.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: sessao.user.id },
-        select: { role: true },
-      })
-    : null
-  const ehAdmin = eu?.role === "ADMIN"
 
   const [materias, semestres, totalAtivas, totalArquivadas] = await Promise.all([
     prisma.materia.findMany({

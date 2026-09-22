@@ -459,3 +459,22 @@ model ProgressoAtividade {
   @@index([usuarioId])
   @@map("progressos_atividade")
 }
+
+// ─────────────────────────────────────────
+// CONFIGURACAO DO PORTAL
+// ─────────────────────────────────────────
+
+/// Chaves que o ADMIN liga e desliga para a turma.
+///
+/// Tabela de chave/valor, e nao uma coluna por opcao: opcao nova vira uma
+/// linha em CHAVES_DE_CONFIGURACAO (src/lib/configuracoes.ts), sem migracao.
+/// Linha ausente significa o padrao declarado la — por isso a tabela pode
+/// nascer vazia e o portal funcionar.
+model Configuracao {
+  chave String  @id @db.VarChar(60)
+  ativo Boolean
+
+  atualizadoEm DateTime @updatedAt
+
+  @@map("configuracoes")
+}
