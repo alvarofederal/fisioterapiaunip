@@ -13,6 +13,7 @@ import {
 } from "@/lib/validators/unidade"
 import { sanitizarHtml } from "@/lib/sanitizar"
 import { htmlTemConteudo } from "@/lib/unidades"
+import { configuracaoLigada } from "@/lib/configuracoes-servidor"
 
 export type Resultado = { ok: true } | { ok: false; erro: string }
 
@@ -35,16 +36,62 @@ function revalidar(materiaId: string) {
   revalidatePath("/painel/materias")
 }
 
-// ─── Estrutura (ADMIN) ───────────────────────────────────────────
+// ─── Estrutura: da turma ou de cada aluno ────────────────────────
 
+/**
+ * Quem pode mexer nesta unidade.
+ *
+ * Sem dono é currículo da turma: só o ADMIN altera, todo mundo enxerga.
+ * Com dono é organização de estudo particular: só o dono altera — nem o
+ * ADMIN, pelo mesmo motivo pelo qual ele não edita o resumo de ninguém.
+ *
+ * A teleaula não tem dono próprio: herda o da unidade em que está. Por isso
+ * toda checagem de teleaula passa por aqui, pela unidade dela.
+ */
+async function permissaoNaUnidade(unidadeId: string, usuarioId: string) {
+  const unidade = await prisma.unidade.findUnique({
+    where: { id: unidadeId },
+    select: { id: true, donoId: true, materiaId: true },
+  })
+  if (!unidade) return { ok: false as const, erro: "Unidade não encontrada." }
+
+  if (unidade.donoId === null) {
+    const admin = await exigirAdmin()
+    if (!admin.ok) {
+      return { ok: false as const, erro: "Só o administrador altera as unidades da turma." }
+    }
+    return { ok: true as const, unidade }
+  }
+
+  if (unidade.donoId !== usuarioId) {
+    return { ok: false as const, erro: "Esta unidade é de outro aluno." }
+  }
+  return { ok: true as const, unidade }
+}
+
+/**
+ * Cria a unidade. ADMIN cria a da turma; aluno cria a dele.
+ *
+ * Não é ação exclusiva de ADMIN de propósito: o aluno monta as próprias
+ * unidades dentro das matérias que o ADMIN cadastrou. O que ele cria nasce
+ * com dono e não aparece para mais ninguém.
+ */
 export async function criarUnidade(dadosBrutos: unknown): Promise<Resultado> {
-  const permissao = await exigirAdmin()
-  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+  const quem = await alunoAtivo()
+  if (!quem.ok) return { ok: false, erro: quem.erro }
 
   const validacao = unidadeSchema.safeParse(dadosBrutos)
   if (!validacao.success) return { ok: false, erro: validacao.error.issues[0].message }
 
   const { materiaId, numero, titulo, quantidadeTeleaulas } = validacao.data
+
+  const admin = await exigirAdmin()
+  const ehAdmin = admin.ok
+
+  // Aluno só monta a própria estrutura se o ADMIN deixou ligado.
+  if (!ehAdmin && !(await configuracaoLigada("aluno_cria_unidades"))) {
+    return { ok: false, erro: "O administrador desligou a criação de unidades próprias." }
+  }
 
   const materia = await prisma.materia.findUnique({
     where: { id: materiaId },
@@ -52,11 +99,20 @@ export async function criarUnidade(dadosBrutos: unknown): Promise<Resultado> {
   })
   if (!materia) return { ok: false, erro: "Matéria não encontrada." }
 
+  const donoId = ehAdmin ? null : quem.usuarioId
+
   const jaExiste = await prisma.unidade.findFirst({
-    where: { materiaId, numero },
+    where: { materiaId, numero, donoId },
     select: { id: true },
   })
-  if (jaExiste) return { ok: false, erro: `Já existe a Unidade ${numero} nesta matéria.` }
+  if (jaExiste) {
+    return {
+      ok: false,
+      erro: ehAdmin
+        ? `Já existe a Unidade ${numero} da turma nesta matéria.`
+        : `Você já tem a Unidade ${numero} nesta matéria.`,
+    }
+  }
 
   try {
     // As teleaulas nascem junto: a unidade do AVA praticamente nunca vem
@@ -66,6 +122,7 @@ export async function criarUnidade(dadosBrutos: unknown): Promise<Resultado> {
         materiaId,
         numero,
         titulo: titulo || null,
+        donoId,
         teleaulas: {
           create: Array.from({ length: quantidadeTeleaulas }, (_, i) => ({ numero: i + 1 })),
         },
@@ -84,17 +141,14 @@ export async function atualizarUnidade(
   unidadeId: string,
   titulo: string
 ): Promise<Resultado> {
-  const permissao = await exigirAdmin()
+  const quem = await alunoAtivo()
+  if (!quem.ok) return { ok: false, erro: quem.erro }
+
+  const permissao = await permissaoNaUnidade(unidadeId, quem.usuarioId)
   if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
   const limpo = String(titulo ?? "").trim()
   if (limpo.length > 120) return { ok: false, erro: "O título pode ter no máximo 120 caracteres" }
-
-  const unidade = await prisma.unidade.findUnique({
-    where: { id: unidadeId },
-    select: { materiaId: true },
-  })
-  if (!unidade) return { ok: false, erro: "Unidade não encontrada." }
 
   try {
     await prisma.unidade.update({ where: { id: unidadeId }, data: { titulo: limpo || null } })
@@ -103,20 +157,22 @@ export async function atualizarUnidade(
     return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
   }
 
-  revalidar(unidade.materiaId)
+  revalidar(permissao.unidade.materiaId)
   return { ok: true }
 }
 
-/** Excluir a unidade leva junto as teleaulas e os resumos de TODA a turma. */
+/**
+ * Excluir a unidade leva junto as teleaulas e os resumos escritos nelas.
+ *
+ * Na unidade da turma isso atinge TODA a turma; na unidade própria, só o
+ * dono. A tela avisa qual dos dois casos é antes de confirmar.
+ */
 export async function excluirUnidade(unidadeId: string): Promise<Resultado> {
-  const permissao = await exigirAdmin()
-  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+  const quem = await alunoAtivo()
+  if (!quem.ok) return { ok: false, erro: quem.erro }
 
-  const unidade = await prisma.unidade.findUnique({
-    where: { id: unidadeId },
-    select: { materiaId: true },
-  })
-  if (!unidade) return { ok: false, erro: "Unidade não encontrada." }
+  const permissao = await permissaoNaUnidade(unidadeId, quem.usuarioId)
+  if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
   try {
     await prisma.unidade.delete({ where: { id: unidadeId } })
@@ -125,24 +181,22 @@ export async function excluirUnidade(unidadeId: string): Promise<Resultado> {
     return { ok: false, erro: "Não foi possível excluir. Tente de novo." }
   }
 
-  revalidar(unidade.materiaId)
+  revalidar(permissao.unidade.materiaId)
   return { ok: true }
 }
 
 export async function criarTeleaula(dadosBrutos: unknown): Promise<Resultado> {
-  const permissao = await exigirAdmin()
-  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+  const quem = await alunoAtivo()
+  if (!quem.ok) return { ok: false, erro: quem.erro }
 
   const validacao = teleaulaSchema.safeParse(dadosBrutos)
   if (!validacao.success) return { ok: false, erro: validacao.error.issues[0].message }
 
   const { unidadeId, numero, titulo } = validacao.data
 
-  const unidade = await prisma.unidade.findUnique({
-    where: { id: unidadeId },
-    select: { materiaId: true },
-  })
-  if (!unidade) return { ok: false, erro: "Unidade não encontrada." }
+  // A teleaula herda o dono da unidade, então a permissão é a da unidade.
+  const permissao = await permissaoNaUnidade(unidadeId, quem.usuarioId)
+  if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
   const jaExiste = await prisma.teleaula.findFirst({
     where: { unidadeId, numero },
@@ -157,20 +211,23 @@ export async function criarTeleaula(dadosBrutos: unknown): Promise<Resultado> {
     return { ok: false, erro: "Não foi possível criar. Tente de novo." }
   }
 
-  revalidar(unidade.materiaId)
+  revalidar(permissao.unidade.materiaId)
   return { ok: true }
 }
 
-/** Excluir a teleaula apaga o resumo que cada aluno escreveu nela. */
+/** Excluir a teleaula apaga o resumo escrito nela. */
 export async function excluirTeleaula(teleaulaId: string): Promise<Resultado> {
-  const permissao = await exigirAdmin()
-  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+  const quem = await alunoAtivo()
+  if (!quem.ok) return { ok: false, erro: quem.erro }
 
   const teleaula = await prisma.teleaula.findUnique({
     where: { id: teleaulaId },
-    select: { unidade: { select: { materiaId: true } } },
+    select: { unidadeId: true },
   })
   if (!teleaula) return { ok: false, erro: "Teleaula não encontrada." }
+
+  const permissao = await permissaoNaUnidade(teleaula.unidadeId, quem.usuarioId)
+  if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
   try {
     await prisma.teleaula.delete({ where: { id: teleaulaId } })
@@ -179,7 +236,7 @@ export async function excluirTeleaula(teleaulaId: string): Promise<Resultado> {
     return { ok: false, erro: "Não foi possível excluir. Tente de novo." }
   }
 
-  revalidar(teleaula.unidade.materiaId)
+  revalidar(permissao.unidade.materiaId)
   return { ok: true }
 }
 

@@ -33,7 +33,8 @@ export default async function PaginaRevisao({
     include: {
       semestre: { select: { ano: true, periodo: true } },
       unidades: {
-        orderBy: { numero: "asc" },
+        where: { OR: [{ donoId: null }, { donoId: usuarioId }] },
+        orderBy: [{ donoId: "asc" }, { numero: "asc" }],
         include: {
           teleaulas: {
             orderBy: { numero: "asc" },
@@ -51,6 +52,7 @@ export default async function PaginaRevisao({
     id: u.id,
     numero: u.numero,
     titulo: u.titulo,
+    ehPropria: u.donoId !== null,
     progresso: PROGRESSO_VAZIO,
     teleaulas: u.teleaulas.map((t) => ({
       id: t.id,

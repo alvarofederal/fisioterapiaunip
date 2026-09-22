@@ -48,11 +48,12 @@ const EditorResumo = dynamic(
 export function PainelUnidade({
   unidade,
   corDaMateria,
-  ehAdmin,
+  podeEditar,
 }: {
   unidade: UnidadeComProgresso
   corDaMateria: string
-  ehAdmin: boolean
+  /** Unidade da turma: só o ADMIN. Unidade própria: só o dono. */
+  podeEditar: boolean
 }) {
   const router = useRouter()
   const [salvando, iniciar] = useTransition()
@@ -82,13 +83,11 @@ export function PainelUnidade({
   }
 
   function apagarUnidade() {
-    if (
-      !confirm(
-        `Excluir a ${rotuloUnidade(unidade)}?\n\nAs teleaulas e os resumos de TODA a turma vão junto. Não há como desfazer.`
-      )
-    ) {
-      return
-    }
+    const aviso = unidade.ehPropria
+      ? "As teleaulas e os seus resumos vão junto. Não há como desfazer."
+      : "As teleaulas e os resumos de TODA a turma vão junto. Não há como desfazer."
+
+    if (!confirm(`Excluir a ${rotuloUnidade(unidade)}?\n\n${aviso}`)) return
 
     iniciar(async () => {
       const r = await excluirUnidade(unidade.id)
@@ -119,7 +118,14 @@ export function PainelUnidade({
     <details className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] [&[open]]:border-white/20">
       <summary className="flex cursor-pointer list-none items-center gap-4 p-5 transition-colors hover:bg-white/[0.03]">
         <div className="min-w-0 flex-1">
-          <h3 className="titulo-display text-[17px] leading-tight">{rotuloUnidade(unidade)}</h3>
+          <h3 className="flex flex-wrap items-center gap-2 titulo-display text-[17px] leading-tight">
+            {rotuloUnidade(unidade)}
+            {unidade.ehPropria && (
+              <span className="rounded-full bg-vivid-cerulean/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-vivid-cerulean">
+                Só sua
+              </span>
+            )}
+          </h3>
           <p className="mt-1 text-[13px] text-greyple">
             {unidade.teleaulas.length === 0
               ? "Sem teleaulas"
@@ -197,13 +203,13 @@ export function PainelUnidade({
                 key={teleaula.id}
                 teleaula={teleaula}
                 corDaMateria={corDaMateria}
-                ehAdmin={ehAdmin}
+                podeEditar={podeEditar}
               />
             ))}
           </div>
         )}
 
-        {ehAdmin && (
+        {podeEditar && (
           <div className="mt-6 flex flex-wrap gap-2 border-t border-white/[0.08] pt-4">
             <button
               type="button"
@@ -237,11 +243,12 @@ export function PainelUnidade({
 function BlocoTeleaula({
   teleaula,
   corDaMateria,
-  ehAdmin,
+  podeEditar,
 }: {
   teleaula: TeleaulaComEstudo
   corDaMateria: string
-  ehAdmin: boolean
+  /** Apaga a teleaula. Escrever o resumo, qualquer aluno pode. */
+  podeEditar: boolean
 }) {
   const router = useRouter()
   const [salvando, iniciar] = useTransition()
@@ -377,7 +384,7 @@ function BlocoTeleaula({
               {htmlTemConteudo(teleaula.anotacoes) ? "Editar resumo" : "Escrever resumo"}
             </button>
 
-            {ehAdmin && (
+            {podeEditar && (
               <button
                 type="button"
                 onClick={apagar}

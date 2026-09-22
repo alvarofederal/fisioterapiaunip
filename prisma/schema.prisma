@@ -37,6 +37,7 @@ model User {
   progressosUnidade   ProgressoUnidade[]   @relation("ProgressoDoUsuario")
   estudosTeleaula     EstudoTeleaula[]     @relation("EstudoTeleaulaDoUsuario")
   progressosAtividade ProgressoAtividade[] @relation("ProgressoAtividadeDoUsuario")
+  unidadesProprias    Unidade[]            @relation("UnidadeDoAluno")
   estudos             Estudo[]             @relation("EstudoDoUsuario")
   aulasProprias       Aula[]               @relation("AulaDoAluno")
   atividadesCriadas   Atividade[]          @relation("AtividadeCriadaPor")
@@ -346,6 +347,21 @@ model Unidade {
   numero Int // 1, 2, 3... exibido como I, II, III
   titulo String?
 
+  /// Dono da unidade — o campo que separa o currículo da turma do estudo
+  /// particular de cada um.
+  ///
+  /// NULO      = unidade da turma. Só o ADMIN cria e edita; todo mundo vê e
+  ///             escreve o próprio resumo dentro dela.
+  /// PREENCHIDO = unidade daquele aluno. Só ele vê, só ele edita — nem o
+  ///             ADMIN, porque é organização de estudo pessoal.
+  ///
+  /// As teleaulas não têm dono próprio: herdam o da unidade em que estão.
+  /// Dois pontos de propriedade permitiriam uma teleaula privada dentro de
+  /// uma unidade da turma, e não haveria resposta certa para quem pode
+  /// apagá-la.
+  donoId String?
+  dono   User?   @relation("UnidadeDoAluno", fields: [donoId], references: [id], onDelete: Cascade)
+
   materiaId String
   materia   Materia @relation(fields: [materiaId], references: [id], onDelete: Cascade)
 
@@ -355,8 +371,11 @@ model Unidade {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@unique([materiaId, numero])
+  /// A unicidade é por dono: a Unidade I da turma e a Unidade I de um aluno
+  /// são coisas diferentes e convivem na mesma matéria.
+  @@unique([materiaId, donoId, numero])
   @@index([materiaId])
+  @@index([donoId])
   @@map("unidades")
 }
 

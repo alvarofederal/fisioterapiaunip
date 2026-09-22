@@ -14,6 +14,7 @@ import {
   type UnidadeComProgresso,
 } from "@/lib/unidades"
 import { exigirRotaLiberada } from "@/lib/porta-de-rota"
+import { configuracaoLigada } from "@/lib/configuracoes-servidor"
 import { PainelUnidade } from "./_components/painel-unidade"
 import { DialogoUnidade } from "./_components/dialogo-unidade"
 
@@ -33,7 +34,11 @@ export default async function PaginaMateria({
       include: {
         semestre: { select: { ano: true, periodo: true } },
         unidades: {
-          orderBy: { numero: "asc" },
+          // A barreira entre as duas estruturas: sem dono é da turma; com
+          // dono, só aparece para o próprio. Sem este OR, a unidade que um
+          // aluno criou entraria na tela de todo mundo.
+          where: { OR: [{ donoId: null }, { donoId: usuarioId }] },
+          orderBy: [{ donoId: "asc" }, { numero: "asc" }],
           include: {
             // `where` pelo usuário da sessão é a barreira: o progresso e o
             // resumo dos colegas nem saem do banco.
@@ -50,11 +55,13 @@ export default async function PaginaMateria({
   if (!materia) notFound()
 
   const tema = CORES_MATERIA[materia.cor]
+  const podeCriarUnidade = ehAdmin || (await configuracaoLigada("aluno_cria_unidades"))
 
   const unidades: UnidadeComProgresso[] = materia.unidades.map((u) => ({
     id: u.id,
     numero: u.numero,
     titulo: u.titulo,
+    ehPropria: u.donoId !== null,
     progresso: u.progressos[0]
       ? {
           livroLido: u.progressos[0].livroLido,
@@ -154,10 +161,18 @@ export default async function PaginaMateria({
               Gerar PDF de revisão
             </Link>
           )}
-          {ehAdmin && (
+          {podeCriarUnidade && (
             <DialogoUnidade
               materiaId={materia.id}
-              proximoNumero={(unidades.at(-1)?.numero ?? 0) + 1}
+              ehAdmin={ehAdmin}
+              proximoNumero={
+                // O número livre é por estrutura: a Unidade I da turma e a do
+                // aluno convivem, então cada um conta a partir das suas.
+                Math.max(
+                  0,
+                  ...unidades.filter((u) => u.ehPropria === !ehAdmin).map((u) => u.numero)
+                ) + 1
+              }
             />
           )}
         </div>
@@ -172,9 +187,13 @@ export default async function PaginaMateria({
           <p className="max-w-[460px] text-[15px] leading-relaxed text-fog">
             {ehAdmin
               ? "Cadastre a Unidade I com as teleaulas dela. Cada aluno marca o próprio progresso e escreve o próprio resumo."
-              : "Assim que o administrador cadastrar as unidades, você marca aqui o que já estudou."}
+              : podeCriarUnidade
+                ? "Monte as unidades do jeito que você estuda. O que você criar aqui é só seu — ninguém mais vê."
+                : "Assim que o administrador cadastrar as unidades, você marca aqui o que já estudou."}
           </p>
-          {ehAdmin && <DialogoUnidade materiaId={materia.id} proximoNumero={1} />}
+          {podeCriarUnidade && (
+            <DialogoUnidade materiaId={materia.id} ehAdmin={ehAdmin} proximoNumero={1} />
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -183,7 +202,8 @@ export default async function PaginaMateria({
               key={unidade.id}
               unidade={unidade}
               corDaMateria={tema.base}
-              ehAdmin={ehAdmin}
+              // Quem edita a unidade da turma é o ADMIN; a própria, o dono.
+              podeEditar={unidade.ehPropria || ehAdmin}
             />
           ))}
         </div>

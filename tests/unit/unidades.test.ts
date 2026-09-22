@@ -28,12 +28,14 @@ function unidade(
     marcados?: Partial<typeof PROGRESSO_VAZIO>
     teleaulas?: TeleaulaComEstudo[]
     titulo?: string | null
+    ehPropria?: boolean
   } = {}
 ): UnidadeComProgresso {
   return {
     id: "u" + numero,
     numero,
     titulo: opcoes.titulo ?? null,
+    ehPropria: opcoes.ehPropria ?? false,
     progresso: { ...PROGRESSO_VAZIO, ...opcoes.marcados },
     teleaulas: opcoes.teleaulas ?? [],
   }

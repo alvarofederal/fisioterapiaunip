@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarDays,
   ListChecks,
+  PencilRuler,
   Newspaper,
   UserPlus,
 } from "lucide-react"
@@ -23,6 +24,7 @@ export type ChaveConfiguracao =
   | "menu_materias"
   | "menu_cronograma"
   | "menu_atividades"
+  | "aluno_cria_unidades"
   | "noticias_publicas"
   | "cadastro_aberto"
 
@@ -32,7 +34,7 @@ export type OpcaoConfiguracao = {
   descricao: string
   padrao: boolean
   icone: LucideIcon
-  grupo: "Menu do aluno" | "Portal público"
+  grupo: "Menu do aluno" | "O que o aluno pode fazer" | "Portal público"
   perigo?: string
 }
 
@@ -65,6 +67,15 @@ export const CONFIGURACOES: OpcaoConfiguracao[] = [
     perigo: "Desligado, a turma deixa de ver prazo de entrega e anexo de trabalho.",
   },
   {
+    chave: "aluno_cria_unidades",
+    rotulo: "Aluno monta as próprias unidades",
+    descricao:
+      "Dentro das matérias que você cadastrou, cada aluno pode criar unidades e teleaulas só dele. Ninguém mais vê, nem você — é a organização de estudo particular dele.",
+    padrao: true,
+    icone: PencilRuler,
+    grupo: "O que o aluno pode fazer",
+  },
+  {
     chave: "noticias_publicas",
     rotulo: "Página de notícias",
     descricao:
@@ -87,6 +98,7 @@ export const CONFIGURACOES: OpcaoConfiguracao[] = [
 
 export const ORDEM_GRUPOS: OpcaoConfiguracao["grupo"][] = [
   "Menu do aluno",
+  "O que o aluno pode fazer",
   "Portal público",
 ]
 

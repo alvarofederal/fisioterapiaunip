@@ -46,6 +46,8 @@ export type UnidadeComProgresso = {
   id: string
   numero: number
   titulo: string | null
+  /** Falso = unidade da turma; verdadeiro = criada pelo próprio aluno. */
+  ehPropria: boolean
   progresso: ProgressoDaUnidade
   teleaulas: TeleaulaComEstudo[]
 }

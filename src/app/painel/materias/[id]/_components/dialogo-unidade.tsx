@@ -19,9 +19,12 @@ import { criarUnidade } from "../_actions"
 export function DialogoUnidade({
   materiaId,
   proximoNumero,
+  ehAdmin,
 }: {
   materiaId: string
   proximoNumero: number
+  /** ADMIN cria a unidade da turma; aluno cria a dele. */
+  ehAdmin: boolean
 }) {
   const router = useRouter()
   const [aberto, setAberto] = useState(false)
@@ -77,7 +80,9 @@ export function DialogoUnidade({
         <DialogHeader>
           <DialogTitle className="titulo-display text-[22px]">Nova unidade</DialogTitle>
           <DialogDescription className="text-fog">
-            A estrutura é da turma toda. Cada aluno marca o próprio progresso.
+            {ehAdmin
+              ? "A estrutura é da turma toda. Cada aluno marca o próprio progresso."
+              : "Esta unidade é só sua — nem o administrador vê o que você montar aqui."}
           </DialogDescription>
         </DialogHeader>
 

@@ -35,7 +35,7 @@ export default async function PaginaMaterias({
 }) {
   // Recusa o acesso direto quando o ADMIN desligou a opção; o papel vem do
   // banco, não do token.
-  const { ehAdmin } = await exigirRotaLiberada("menu_materias")
+  const { usuarioId, ehAdmin } = await exigirRotaLiberada("menu_materias")
 
   const { arquivadas } = await searchParams
   const vendoArquivadas = arquivadas === "1"
@@ -45,7 +45,13 @@ export default async function PaginaMaterias({
       where: { arquivada: vendoArquivadas },
       include: {
         semestre: { select: { id: true, ano: true, periodo: true } },
-        _count: { select: { atividades: true, unidades: true } },
+        _count: {
+          select: {
+            atividades: true,
+            // Conta o que esta pessoa enxerga: as da turma mais as dela.
+            unidades: { where: { OR: [{ donoId: null }, { donoId: usuarioId }] } },
+          },
+        },
       },
     }),
     // Do mais recente para o mais antigo: é o semestre em curso que interessa,
