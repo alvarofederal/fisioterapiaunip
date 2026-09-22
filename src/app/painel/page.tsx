@@ -24,7 +24,7 @@ export default async function MuralDaTurma() {
       where: { arquivada: false },
       include: {
         materia: { select: { id: true, nome: true, cor: true } },
-        _count: { select: { anexos: true } },
+        anexos: true,
       },
       take: 60,
     }),

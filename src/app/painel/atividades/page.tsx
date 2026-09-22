@@ -45,7 +45,7 @@ export default async function PaginaAtividades({
       },
       include: {
         materia: { select: { id: true, nome: true, cor: true } },
-        _count: { select: { anexos: true } },
+        anexos: true,
       },
     }),
     prisma.atividade.groupBy({
@@ -174,6 +174,13 @@ export default async function PaginaAtividades({
                         linkExterno: atividade.linkExterno,
                         cargaHoraria: atividade.cargaHoraria,
                         integrantes: atividade.integrantes,
+                        anexos: atividade.anexos.map((x) => ({
+                          nome: x.nome,
+                          url: x.url,
+                          publicId: x.publicId,
+                          tipo: x.tipo,
+                          tamanho: x.tamanho,
+                        })),
                       }}
                     />
                   ) : undefined

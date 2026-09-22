@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { ORDEM_TIPOS_ATIVIDADE, TIPOS_ATIVIDADE } from "@/lib/dominio"
 import type { TipoAtividade } from "@/generated/prisma"
 import { criarAtividade, atualizarAtividade } from "../_actions"
+import { CampoAnexos, type AnexoEnviado } from "./campo-anexos"
 
 type MateriaOpcao = { id: string; nome: string }
 
@@ -35,6 +36,7 @@ export type AtividadeEditavel = {
   linkExterno: string | null
   cargaHoraria: number | null
   integrantes: string | null
+  anexos?: AnexoEnviado[]
 }
 
 /** Date -> "2026-10-17" para o input[type=date]. Lê em UTC, como foi gravado. */
@@ -58,6 +60,7 @@ function estadoInicial(atividade?: AtividadeEditavel) {
     linkExterno: atividade?.linkExterno ?? "",
     cargaHoraria: atividade?.cargaHoraria != null ? String(atividade.cargaHoraria) : "",
     integrantes: atividade?.integrantes ?? "",
+    anexos: atividade?.anexos ?? ([] as AnexoEnviado[]),
   }
 }
 
@@ -411,6 +414,11 @@ export function DialogoAtividade({
               )}
             </div>
           )}
+
+          <CampoAnexos
+            anexos={dados.anexos}
+            aoMudar={(lista) => setDados((atual) => ({ ...atual, anexos: lista }))}
+          />
 
           <div>
             <label htmlFor="descricao" className="rotulo">

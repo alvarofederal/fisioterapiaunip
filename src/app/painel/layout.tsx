@@ -44,7 +44,9 @@ export default async function LayoutPainel({
       />
 
       <div className="lg:pl-[260px]">
-        <main className="mx-auto max-w-[1100px] px-5 py-6 lg:py-10">{children}</main>
+        {/* Sem largura máxima: o painel usa a tela inteira. Tabelas e listas
+            longas rendem mais em monitor largo do que uma coluna centrada. */}
+        <main className="px-5 py-6 lg:px-8 lg:py-10">{children}</main>
       </div>
     </div>
   )

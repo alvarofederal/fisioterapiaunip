@@ -52,6 +52,20 @@ export const atividadeSchema = z
         message: "Carga horária entre 0 e 999",
       }),
     integrantes: z.string().trim().max(1000, "A lista pode ter até 1000 caracteres").optional().or(z.literal("")),
+
+    /// Metadados dos arquivos já enviados ao Cloudinary por /api/upload.
+    anexos: z
+      .array(
+        z.object({
+          nome: z.string().min(1).max(255),
+          url: z.string().url().max(500),
+          publicId: z.string().min(1).max(255),
+          tipo: z.enum(["IMAGEM", "PDF", "DOCUMENTO", "APRESENTACAO", "OUTRO"]),
+          tamanho: z.number().int().nonnegative(),
+        })
+      )
+      .max(10, "No máximo 10 anexos por atividade")
+      .default([]),
   })
   .superRefine((dados, ctx) => {
     // Trabalho e seminário pertencem a uma matéria; congresso e evento externo

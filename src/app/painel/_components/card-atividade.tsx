@@ -8,14 +8,22 @@ import {
   Award,
   ExternalLink,
   Archive,
+  FileText,
+  Download,
 } from "lucide-react"
-import type { Atividade, Materia } from "@/generated/prisma"
-import { CORES_MATERIA, TIPOS_ATIVIDADE, dataQueImporta, diasAte } from "@/lib/dominio"
+import type { Anexo, Atividade, Materia } from "@/generated/prisma"
+import {
+  CORES_MATERIA,
+  TIPOS_ATIVIDADE,
+  dataQueImporta,
+  diasAte,
+  formatarTamanho,
+} from "@/lib/dominio"
 import { cn } from "@/lib/utils"
 
 export type AtividadeDoMural = Atividade & {
   materia: Pick<Materia, "id" | "nome" | "cor"> | null
-  _count: { anexos: number }
+  anexos: Anexo[]
 }
 
 /** Selo de prazo: muda de cor conforme a urgência. */
@@ -156,7 +164,55 @@ export function CardAtividade({
         )}
       </div>
 
+      {/* Anexos para baixar — é o material do professor que a turma veio buscar */}
+      {atividade.anexos.length > 0 && (
+        <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {atividade.anexos.map((anexo) => (
+            <li key={anexo.id}>
+              <a
+                href={anexo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                download={anexo.nome}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-2 transition-colors hover:border-white/25 hover:bg-white/[0.06]"
+              >
+                {anexo.tipo === "IMAGEM" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={anexo.url}
+                    alt=""
+                    className="size-10 shrink-0 rounded-lg object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-vivid-cerulean/15 text-vivid-cerulean">
+                    <FileText size={18} aria-hidden />
+                  </span>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-medium text-white">
+                    {anexo.nome}
+                  </span>
+                  <span className="block text-[11px] text-greyple">
+                    {formatarTamanho(anexo.tamanho)} · baixar
+                  </span>
+                </span>
+                <Download size={15} className="shrink-0 text-greyple" aria-hidden />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-white/[0.08] pt-3 text-[12px] text-greyple">
+        {atividade.anexos.length > 0 && (
+          <span className="inline-flex items-center gap-1.5 font-medium text-vivid-cerulean">
+            <Paperclip size={12} aria-hidden />
+            {atividade.anexos.length}{" "}
+            {atividade.anexos.length === 1 ? "anexo" : "anexos"}
+          </span>
+        )}
+
         {atividade.linkExterno && (
           <Link
             href={atividade.linkExterno}
@@ -167,13 +223,6 @@ export function CardAtividade({
             <ExternalLink size={12} aria-hidden />
             Abrir link
           </Link>
-        )}
-
-        {atividade._count.anexos > 0 && (
-          <span className="inline-flex items-center gap-1.5 font-medium text-vivid-cerulean">
-            <Paperclip size={12} aria-hidden />
-            {atividade._count.anexos} {atividade._count.anexos === 1 ? "anexo" : "anexos"}
-          </span>
         )}
 
         <span>
