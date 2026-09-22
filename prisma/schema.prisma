@@ -33,10 +33,12 @@ model User {
   ativo        Boolean   @default(false)
   ultimoAcesso DateTime?
 
-  materiasCriadas  Materia[]  @relation("MateriaCriadaPor")
-  estudos          Estudo[]    @relation("EstudoDoUsuario")
-  aulasProprias    Aula[]      @relation("AulaDoAluno")
-  atividadesCriadas Atividade[] @relation("AtividadeCriadaPor")
+  materiasCriadas   Materia[]          @relation("MateriaCriadaPor")
+  progressosUnidade ProgressoUnidade[] @relation("ProgressoDoUsuario")
+  estudosTeleaula   EstudoTeleaula[]   @relation("EstudoTeleaulaDoUsuario")
+  estudos           Estudo[]           @relation("EstudoDoUsuario")
+  aulasProprias     Aula[]             @relation("AulaDoAluno")
+  atividadesCriadas Atividade[]        @relation("AtividadeCriadaPor")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -48,11 +50,11 @@ model User {
 
 /// Tentativas de login, para travar força bruta por e-mail e por IP.
 model LoginAttempt {
-  id        String   @id @default(cuid())
-  email     String
-  ip        String?
-  sucesso   Boolean  @default(false)
-  criadoEm  DateTime @default(now())
+  id       String   @id @default(cuid())
+  email    String
+  ip       String?
+  sucesso  Boolean  @default(false)
+  criadoEm DateTime @default(now())
 
   @@index([email, criadoEm])
   @@index([ip, criadoEm])
@@ -72,12 +74,12 @@ model Materia {
   cor       CorTema   @default(AZUL)
   arquivada Boolean   @default(false)
 
-  /// Ano e período em que a matéria é cursada.
-  /// O semestre do curso (1 a 10) NÃO é guardado — é derivado por
-  /// `semestreDoCurso()` em src/lib/dominio.ts. Guardar o derivado junto seria
-  /// abrir espaço para os dois discordarem.
-  ano     Int @default(2026)
-  periodo Int @default(2) // 1 ou 2
+  /// Em que semestre a matéria é cursada.
+  /// Ano e período moram no Semestre, não aqui: guardados nos dois lugares, um
+  /// dia discordariam. O semestre do curso (1 a 10) continua derivado por
+  /// `semestreDoCurso()` em src/lib/dominio.ts, pelo mesmo motivo.
+  semestreId String
+  semestre   Semestre @relation(fields: [semestreId], references: [id])
 
   /// Presencial tem encontro com data marcada; EaD o aluno faz no ritmo dele.
   modalidade Modalidade @default(EAD)
@@ -86,6 +88,7 @@ model Materia {
   criadoPor   User        @relation("MateriaCriadaPor", fields: [criadoPorId], references: [id])
   atividades  Atividade[]
   aulas       Aula[]
+  unidades    Unidade[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -93,7 +96,7 @@ model Materia {
   @@index([criadoPorId])
   @@index([arquivada])
   @@index([diaSemana])
-  @@index([ano, periodo])
+  @@index([semestreId])
   @@map("materias")
 }
 
@@ -297,4 +300,131 @@ enum StatusEstudo {
   A_ESTUDAR
   ESTUDANDO
   REVISADO
+}
+
+// ─────────────────────────────────────────
+// SEMESTRE
+// ─────────────────────────────────────────
+
+/// O semestre letivo em que a turma está.
+///
+/// Não guarda qual é o "atual": isso é derivado do par (ano, período) mais
+/// recente, em `semestreAtual()`. Uma coluna `atual` permitiria dois semestres
+/// marcados ao mesmo tempo, e aí não haveria resposta certa para a pergunta.
+model Semestre {
+  id      String @id @default(cuid())
+  ano     Int
+  periodo Int // 1 ou 2
+
+  /// Só informativo, para a tela mostrar o intervalo. Nada depende disso.
+  inicioEm DateTime? @db.Date
+  fimEm    DateTime? @db.Date
+
+  materias Materia[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([ano, periodo])
+  @@map("semestres")
+}
+
+// ─────────────────────────────────────────
+// AVA — UNIDADES, TELEAULAS E PROGRESSO
+// ─────────────────────────────────────────
+
+/// Uma unidade do AVA: "Unidade I", com seu livro-texto, seus slides e suas
+/// teleaulas.
+///
+/// É currículo, não agenda: não tem data. Quem cadastra é o ADMIN, porque a
+/// estrutura vem da UNIP e vale igual para a turma inteira. O que é de cada
+/// aluno são o `ProgressoUnidade` e as anotações das teleaulas.
+model Unidade {
+  id     String  @id @default(cuid())
+  numero Int // 1, 2, 3... exibido como I, II, III
+  titulo String?
+
+  materiaId String
+  materia   Materia @relation(fields: [materiaId], references: [id], onDelete: Cascade)
+
+  teleaulas  Teleaula[]
+  progressos ProgressoUnidade[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([materiaId, numero])
+  @@index([materiaId])
+  @@map("unidades")
+}
+
+/// Uma teleaula dentro da unidade — normalmente quatro por unidade.
+///
+/// Diferente de `Aula`, que é encontro com data marcada. Esta não tem data:
+/// ela se ordena por número e o aluno assiste quando quiser.
+model Teleaula {
+  id     String  @id @default(cuid())
+  numero Int
+  titulo String?
+
+  unidadeId String
+  unidade   Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+
+  estudos EstudoTeleaula[]
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([unidadeId, numero])
+  @@index([unidadeId])
+  @@map("teleaulas")
+}
+
+/// O que ESTE aluno já cumpriu nesta unidade.
+///
+/// As quatro colunas são a forma fixa do AVA da UNIP: toda unidade tem
+/// livro-texto, slides, Atividade Teleaula e Questionário. Os rótulos e a
+/// ordem de exibição ficam em `ITENS_DA_UNIDADE` (src/lib/dominio.ts) — a tela
+/// nunca cita coluna na mão.
+model ProgressoUnidade {
+  id String @id @default(cuid())
+
+  livroLido         Boolean @default(false)
+  slidesVistos      Boolean @default(false)
+  atividadeFeita    Boolean @default(false)
+  questionarioFeito Boolean @default(false)
+
+  unidadeId String
+  unidade   Unidade @relation(fields: [unidadeId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   User    @relation("ProgressoDoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([unidadeId, usuarioId])
+  @@index([usuarioId])
+  @@map("progressos_unidade")
+}
+
+/// O estudo de ESTE aluno nesta teleaula: o status e o resumo que ele escreveu.
+///
+/// `anotacoes` é o texto que vai para o PDF de revisão da matéria — é a razão
+/// de ser da tela, não um campo acessório.
+model EstudoTeleaula {
+  id        String       @id @default(cuid())
+  status    StatusEstudo @default(A_ESTUDAR)
+  anotacoes String?      @db.Text
+
+  teleaulaId String
+  teleaula   Teleaula @relation(fields: [teleaulaId], references: [id], onDelete: Cascade)
+  usuarioId  String
+  usuario    User     @relation("EstudoTeleaulaDoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([teleaulaId, usuarioId])
+  @@index([usuarioId, status])
+  @@map("estudos_teleaula")
 }
