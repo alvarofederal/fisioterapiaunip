@@ -2,12 +2,21 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Loader2, NotebookPen, Pencil, Trash2, Clock } from "lucide-react"
+import {
+  Check,
+  Loader2,
+  NotebookPen,
+  Pencil,
+  Trash2,
+  Clock,
+  RotateCcw,
+} from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { CORES_MATERIA, STATUS_ESTUDO, diasAte, textoDeProximidade } from "@/lib/dominio"
 import type { CorTema, StatusEstudo } from "@/generated/prisma"
 import { salvarEstudo, salvarConteudoAula, excluirAula } from "../_actions"
+import { DialogoAula } from "./dialogo-aula"
 
 export type AulaDoCronograma = {
   id: string
@@ -30,10 +39,12 @@ export function CardAula({
   aula,
   ehAdmin,
   destaque,
+  materias = [],
 }: {
   aula: AulaDoCronograma
   ehAdmin: boolean
   destaque?: boolean
+  materias?: { id: string; nome: string }[]
 }) {
   const router = useRouter()
   const [salvando, iniciar] = useTransition()
@@ -85,7 +96,8 @@ export function CardAula({
           type="button"
           onClick={avancar}
           disabled={salvando}
-          aria-label={`Andamento: ${info.rotulo}. Clique para mudar.`}
+          aria-label={`Andamento: ${info.rotulo}. Clique para marcar como ${STATUS_ESTUDO[PROXIMO[status]].rotulo}.`}
+          title={`Marcar como "${STATUS_ESTUDO[PROXIMO[status]].rotulo}"`}
           className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border-2 transition-colors disabled:opacity-60"
           style={{
             borderColor: status === "A_ESTUDAR" ? "rgba(255,255,255,0.25)" : info.cor,
@@ -242,6 +254,25 @@ export function CardAula({
               </button>
             )}
 
+            {/* Só aparece quando há o que desfazer. Volta direto para o início,
+                sem ter que clicar no círculo até dar a volta. */}
+            {status !== "A_ESTUDAR" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStatus("A_ESTUDAR")
+                  gravar("A_ESTUDAR", anotacoes)
+                  toast.success("Progresso zerado. A anotação continua salva.")
+                }}
+                disabled={salvando}
+                title="Voltar para 'A estudar'"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-medium text-greyple transition-colors hover:bg-white/[0.08] hover:text-white disabled:opacity-50"
+              >
+                <RotateCcw size={12} aria-hidden />
+                Zerar
+              </button>
+            )}
+
             {ehAdmin && !editandoConteudo && (
               <>
                 <button
@@ -252,6 +283,20 @@ export function CardAula({
                   <Pencil size={12} aria-hidden />
                   Conteúdo
                 </button>
+
+                {materias.length > 0 && (
+                  <DialogoAula
+                    materias={materias}
+                    aula={{
+                      id: aula.id,
+                      materiaId: aula.materia.id,
+                      data: aula.data,
+                      horaInicio: aula.horaInicio,
+                      horaFim: aula.horaFim,
+                      conteudo: aula.conteudo,
+                    }}
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() =>

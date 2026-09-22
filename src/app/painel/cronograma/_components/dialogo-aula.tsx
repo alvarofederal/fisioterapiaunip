@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, CalendarPlus } from "lucide-react"
+import { Loader2, CalendarPlus, CalendarCog } from "lucide-react"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -13,65 +13,111 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { criarAula } from "../_actions"
+import { criarAula, atualizarAula } from "../_actions"
 
 type MateriaOpcao = { id: string; nome: string }
 
-export function DialogoAula({ materias }: { materias: MateriaOpcao[] }) {
+export type AulaEditavel = {
+  id: string
+  materiaId: string
+  data: Date
+  horaInicio: string | null
+  horaFim: string | null
+  conteudo: string | null
+}
+
+/** Date -> "2026-10-17" para o input[type=date]. Lê em UTC, como foi gravado. */
+function paraInput(data: Date): string {
+  return data.toISOString().slice(0, 10)
+}
+
+export function DialogoAula({
+  materias,
+  aula,
+}: {
+  materias: MateriaOpcao[]
+  aula?: AulaEditavel
+}) {
+  const editando = Boolean(aula)
   const router = useRouter()
   const [aberto, setAberto] = useState(false)
   const [enviando, iniciar] = useTransition()
 
-  const [dados, setDados] = useState({
-    materiaId: materias[0]?.id ?? "",
-    data: "",
-    horaInicio: "",
-    horaFim: "",
-    conteudo: "",
+  const inicial = () => ({
+    materiaId: aula?.materiaId ?? materias[0]?.id ?? "",
+    data: aula ? paraInput(aula.data) : "",
+    horaInicio: aula?.horaInicio ?? "",
+    horaFim: aula?.horaFim ?? "",
+    conteudo: aula?.conteudo ?? "",
   })
+
+  const [dados, setDados] = useState(inicial)
+
+  function reabrir(estado: boolean) {
+    setAberto(estado)
+    if (estado) setDados(inicial())
+  }
 
   function aoEnviar(evento: React.FormEvent) {
     evento.preventDefault()
 
     iniciar(async () => {
-      const resultado = await criarAula(dados)
-      if (!resultado.ok) {
-        toast.error(resultado.erro)
+      const r = aula ? await atualizarAula(aula.id, dados) : await criarAula(dados)
+      if (!r.ok) {
+        toast.error(r.erro)
         return
       }
-      toast.success("Encontro adicionado ao cronograma.")
+      toast.success(editando ? "Encontro corrigido." : "Encontro adicionado ao cronograma.")
       setAberto(false)
-      setDados({ ...dados, data: "", conteudo: "" })
+      if (!editando) setDados({ ...dados, data: "", conteudo: "" })
       router.refresh()
     })
   }
 
+  const mudar = (chave: keyof typeof dados, valor: string) =>
+    setDados((atual) => ({ ...atual, [chave]: valor }))
+
   return (
-    <Dialog open={aberto} onOpenChange={setAberto}>
+    <Dialog open={aberto} onOpenChange={reabrir}>
       <DialogTrigger asChild>
-        <button type="button" className="btn-primario">
-          <CalendarPlus size={17} aria-hidden />
-          Novo encontro
-        </button>
+        {editando ? (
+          <button
+            type="button"
+            title="Corrigir data, horário ou matéria"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-medium text-greyple transition-colors hover:bg-white/[0.08] hover:text-white"
+          >
+            <CalendarCog size={12} aria-hidden />
+            Corrigir
+          </button>
+        ) : (
+          <button type="button" className="btn-primario">
+            <CalendarPlus size={17} aria-hidden />
+            Novo encontro
+          </button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[92vh] overflow-y-auto border-white/10 bg-[#1a1b3a] sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="titulo-display text-[22px]">Novo encontro</DialogTitle>
+          <DialogTitle className="titulo-display text-[22px]">
+            {editando ? "Corrigir encontro" : "Novo encontro"}
+          </DialogTitle>
           <DialogDescription className="text-fog">
-            Uma data do cronograma. A turma toda vê; cada um marca o próprio estudo.
+            {editando
+              ? "As anotações de estudo da turma neste encontro continuam salvas."
+              : "Uma data do cronograma. A turma toda vê; cada um marca o próprio estudo."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={aoEnviar} className="flex flex-col gap-5" noValidate>
           <div>
-            <label htmlFor="materiaId" className="rotulo">
+            <label htmlFor={`materia-${aula?.id ?? "novo"}`} className="rotulo">
               Matéria
             </label>
             <select
-              id="materiaId"
+              id={`materia-${aula?.id ?? "novo"}`}
               value={dados.materiaId}
-              onChange={(e) => setDados({ ...dados, materiaId: e.target.value })}
+              onChange={(e) => mudar("materiaId", e.target.value)}
               className="campo"
               required
             >
@@ -84,55 +130,55 @@ export function DialogoAula({ materias }: { materias: MateriaOpcao[] }) {
           </div>
 
           <div>
-            <label htmlFor="data" className="rotulo">
+            <label htmlFor={`data-${aula?.id ?? "novo"}`} className="rotulo">
               Data <span className="text-ekko-red">*</span>
             </label>
             <input
-              id="data"
+              id={`data-${aula?.id ?? "novo"}`}
               type="date"
               required
               value={dados.data}
-              onChange={(e) => setDados({ ...dados, data: e.target.value })}
+              onChange={(e) => mudar("data", e.target.value)}
               className="campo"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="horaInicio" className="rotulo">
+              <label htmlFor={`inicio-${aula?.id ?? "novo"}`} className="rotulo">
                 Início
               </label>
               <input
-                id="horaInicio"
+                id={`inicio-${aula?.id ?? "novo"}`}
                 type="time"
                 value={dados.horaInicio}
-                onChange={(e) => setDados({ ...dados, horaInicio: e.target.value })}
+                onChange={(e) => mudar("horaInicio", e.target.value)}
                 className="campo"
               />
             </div>
             <div>
-              <label htmlFor="horaFim" className="rotulo">
+              <label htmlFor={`fim-${aula?.id ?? "novo"}`} className="rotulo">
                 Fim
               </label>
               <input
-                id="horaFim"
+                id={`fim-${aula?.id ?? "novo"}`}
                 type="time"
                 value={dados.horaFim}
-                onChange={(e) => setDados({ ...dados, horaFim: e.target.value })}
+                onChange={(e) => mudar("horaFim", e.target.value)}
                 className="campo"
               />
             </div>
           </div>
 
           <div>
-            <label htmlFor="conteudo" className="rotulo">
+            <label htmlFor={`conteudo-${aula?.id ?? "novo"}`} className="rotulo">
               O que será visto
             </label>
             <textarea
-              id="conteudo"
+              id={`conteudo-${aula?.id ?? "novo"}`}
               maxLength={2000}
               value={dados.conteudo}
-              onChange={(e) => setDados({ ...dados, conteudo: e.target.value })}
+              onChange={(e) => mudar("conteudo", e.target.value)}
               placeholder="Tópicos do encontro. Dá para preencher depois."
               className="campo min-h-[90px]"
             />
@@ -148,7 +194,7 @@ export function DialogoAula({ materias }: { materias: MateriaOpcao[] }) {
             </button>
             <button type="submit" disabled={enviando} className="btn-primario">
               {enviando && <Loader2 className="size-4 animate-spin" aria-hidden />}
-              {enviando ? "Salvando..." : "Adicionar"}
+              {enviando ? "Salvando..." : editando ? "Salvar correção" : "Adicionar"}
             </button>
           </DialogFooter>
         </form>

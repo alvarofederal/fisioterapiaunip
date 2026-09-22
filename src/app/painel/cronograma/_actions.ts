@@ -163,3 +163,62 @@ export async function excluirAula(aulaId: string): Promise<Resultado> {
   revalidatePath("/painel/cronograma")
   return { ok: true }
 }
+
+/**
+ * Corrige um encontro já criado: data, horário ou matéria.
+ *
+ * Existe para que data errada não precise virar exclusão. Excluir apaga em
+ * cascata o `Estudo` de TODA a turma naquele encontro — as anotações de
+ * revisão de cada um iriam junto, por causa de um erro de digitação do ADMIN.
+ * Editar preserva tudo: o vínculo é o id, não a data.
+ */
+export async function atualizarAula(
+  aulaId: string,
+  dadosBrutos: unknown
+): Promise<Resultado> {
+  const permissao = await exigirAdmin()
+  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+
+  const validacao = aulaSchema.safeParse(dadosBrutos)
+  if (!validacao.success) {
+    return { ok: false, erro: validacao.error.issues[0].message }
+  }
+
+  const existente = await prisma.aula.findUnique({
+    where: { id: aulaId },
+    select: { id: true },
+  })
+  if (!existente) return { ok: false, erro: "Encontro não encontrado." }
+
+  const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
+  const dataEncontro = new Date(`${data}T12:00:00.000Z`)
+
+  // Mesma matéria, mesma data, outro id = duplicata.
+  const conflito = await prisma.aula.findFirst({
+    where: { materiaId, data: dataEncontro, NOT: { id: aulaId } },
+    select: { id: true },
+  })
+  if (conflito) {
+    return { ok: false, erro: "Já existe outro encontro dessa matéria nessa data." }
+  }
+
+  try {
+    await prisma.aula.update({
+      where: { id: aulaId },
+      data: {
+        materiaId,
+        data: dataEncontro,
+        horaInicio: horaInicio || null,
+        horaFim: horaFim || null,
+        conteudo: conteudo || null,
+      },
+    })
+  } catch (erro) {
+    console.error("Falha ao atualizar encontro:", erro)
+    return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
+  }
+
+  revalidatePath("/painel/cronograma")
+  revalidatePath("/painel")
+  return { ok: true }
+}

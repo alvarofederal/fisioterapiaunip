@@ -111,7 +111,7 @@ export default async function PaginaCronograma({
             <Target size={13} aria-hidden />
             {focoEhAtraso ? "Comece por aqui" : "Próximo encontro"}
           </p>
-          <CardAula aula={foco} ehAdmin={ehAdmin} destaque />
+          <CardAula aula={foco} ehAdmin={ehAdmin} destaque materias={materias} />
         </section>
       )}
 
@@ -166,6 +166,7 @@ export default async function PaginaCronograma({
             aulas={atrasadas}
             ehAdmin={ehAdmin}
             cor="#de2761"
+            materias={materias}
           />
           <Grupo
             titulo="Vem aí"
@@ -177,6 +178,7 @@ export default async function PaginaCronograma({
             aulas={futuras}
             ehAdmin={ehAdmin}
             cor="#5865f2"
+            materias={materias}
           />
 
           {/* Concluídos saem da frente, mas continuam a um clique */}
@@ -192,7 +194,7 @@ export default async function PaginaCronograma({
               </summary>
               <div className="mt-3 flex flex-col gap-2.5">
                 {concluidas.map((aula) => (
-                  <CardAula key={aula.id} aula={aula} ehAdmin={ehAdmin} />
+                  <CardAula key={aula.id} aula={aula} ehAdmin={ehAdmin} materias={materias} />
                 ))}
               </div>
             </details>
@@ -209,12 +211,14 @@ function Grupo({
   aulas,
   ehAdmin,
   cor,
+  materias,
 }: {
   titulo: string
   sublinha?: string
   aulas: AulaDoCronograma[]
   ehAdmin: boolean
   cor: string
+  materias: { id: string; nome: string }[]
 }) {
   if (aulas.length === 0) return null
 
@@ -230,7 +234,7 @@ function Grupo({
         {sublinha && <span className="text-[12px] text-greyple">{sublinha}</span>}
       </div>
       {aulas.map((aula) => (
-        <CardAula key={aula.id} aula={aula} ehAdmin={ehAdmin} />
+        <CardAula key={aula.id} aula={aula} ehAdmin={ehAdmin} materias={materias} />
       ))}
     </section>
   )
