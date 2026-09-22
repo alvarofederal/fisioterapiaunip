@@ -5,9 +5,10 @@
 import type {
   CorTema,
   DiaSemana,
-  TipoPost,
+  TipoAtividade,
   TipoAnexo,
   StatusEstudo,
+  Modalidade,
 } from "@/generated/prisma"
 
 /**
@@ -90,10 +91,149 @@ export const ORDEM_DIAS: DiaSemana[] = [
   "A_DEFINIR",
 ]
 
-export const ROTULO_TIPO_POST: Record<TipoPost, string> = {
-  TRABALHO: "Trabalho",
-  EVENTO: "Evento",
-  AVISO: "Aviso",
+// ─── Atividades ──────────────────────────────────────────────────
+
+/**
+ * Os quatro tipos de atividade e — o ponto importante — quais campos cada um
+ * usa. O formulário e o card leem `campos` para decidir o que mostrar, então
+ * acrescentar um tipo novo é acrescentar uma entrada aqui, sem `if` espalhado
+ * pelas telas.
+ */
+export const TIPOS_ATIVIDADE: Record<
+  TipoAtividade,
+  {
+    rotulo: string
+    curto: string
+    explicacao: string
+    cor: string
+    suave: string
+    campos: {
+      materiaObrigatoria: boolean
+      usaEntrega: boolean
+      usaData: boolean
+      usaPeriodo: boolean
+      usaHorario: boolean
+      usaLocal: boolean
+      usaLink: boolean
+      usaCargaHoraria: boolean
+      usaIntegrantes: boolean
+    }
+  }
+> = {
+  TRABALHO_EXTRA_CLASSE: {
+    rotulo: "Trabalho extra classe",
+    curto: "Trabalho",
+    explicacao: "Tarefa para entregar fora da aula, com prazo.",
+    cor: "#00b0f4",
+    suave: "rgba(0, 176, 244, 0.14)",
+    campos: {
+      materiaObrigatoria: true,
+      usaEntrega: true,
+      usaData: false,
+      usaPeriodo: false,
+      usaHorario: false,
+      usaLocal: false,
+      usaLink: true,
+      usaCargaHoraria: false,
+      usaIntegrantes: true,
+    },
+  },
+  SEMINARIO: {
+    rotulo: "Seminário",
+    curto: "Seminário",
+    explicacao: "Apresentação em sala, com data e grupo.",
+    cor: "#a78bfa",
+    suave: "rgba(167, 139, 250, 0.16)",
+    campos: {
+      materiaObrigatoria: true,
+      usaEntrega: false,
+      usaData: true,
+      usaPeriodo: false,
+      usaHorario: true,
+      usaLocal: true,
+      usaLink: false,
+      usaCargaHoraria: false,
+      usaIntegrantes: true,
+    },
+  },
+  EVENTO: {
+    rotulo: "Evento",
+    curto: "Evento",
+    explicacao: "Palestra, visita técnica, atividade avulsa.",
+    cor: "#57f287",
+    suave: "rgba(87, 242, 135, 0.16)",
+    campos: {
+      materiaObrigatoria: false,
+      usaEntrega: false,
+      usaData: true,
+      usaPeriodo: false,
+      usaHorario: true,
+      usaLocal: true,
+      usaLink: true,
+      usaCargaHoraria: true,
+      usaIntegrantes: false,
+    },
+  },
+  CONGRESSO: {
+    rotulo: "Congresso",
+    curto: "Congresso",
+    explicacao: "Vários dias, com inscrição e certificado.",
+    cor: "#fda220",
+    suave: "rgba(253, 162, 32, 0.16)",
+    campos: {
+      materiaObrigatoria: false,
+      usaEntrega: false,
+      usaData: false,
+      usaPeriodo: true,
+      usaHorario: true,
+      usaLocal: true,
+      usaLink: true,
+      usaCargaHoraria: true,
+      usaIntegrantes: false,
+    },
+  },
+}
+
+export const ORDEM_TIPOS_ATIVIDADE: TipoAtividade[] = [
+  "TRABALHO_EXTRA_CLASSE",
+  "SEMINARIO",
+  "EVENTO",
+  "CONGRESSO",
+]
+
+/** A data que importa para ordenar e cobrar: prazo de entrega ou dia do evento. */
+export function dataQueImporta(atividade: {
+  entregaEm: Date | null
+  dataInicio: Date | null
+}): Date | null {
+  return atividade.entregaEm ?? atividade.dataInicio ?? null
+}
+
+// ─── Modalidade e semestre ───────────────────────────────────────
+
+export const ROTULO_MODALIDADE: Record<Modalidade, string> = {
+  PRESENCIAL: "Presencial",
+  EAD: "EaD",
+}
+
+/** Ano e período em que a turma começou o curso. */
+export const ANO_INICIO_CURSO = 2026
+export const PERIODO_INICIO_CURSO = 1
+
+/** Fisioterapia são 5 anos — 10 semestres. */
+export const TOTAL_SEMESTRES_CURSO = 10
+
+/**
+ * Semestre do curso (1 a 10) a partir do ano e período da matéria.
+ * 2026/1 = 1º, 2026/2 = 2º, 2027/1 = 3º, e assim por diante.
+ */
+export function semestreDoCurso(ano: number, periodo: number): number {
+  return (ano - ANO_INICIO_CURSO) * 2 + (periodo - PERIODO_INICIO_CURSO) + 1
+}
+
+/** "2º semestre · 2026/2" */
+export function rotuloSemestre(ano: number, periodo: number): string {
+  return `${semestreDoCurso(ano, periodo)}º semestre · ${ano}/${periodo}`
 }
 
 export const ROTULO_TIPO_ANEXO: Record<TipoAnexo, string> = {

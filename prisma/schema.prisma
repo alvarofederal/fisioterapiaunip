@@ -34,8 +34,9 @@ model User {
   ultimoAcesso DateTime?
 
   materiasCriadas  Materia[]  @relation("MateriaCriadaPor")
-  estudos          Estudo[]   @relation("EstudoDoUsuario")
-  trabalhosCriados Trabalho[] @relation("TrabalhoCriadoPor")
+  estudos          Estudo[]    @relation("EstudoDoUsuario")
+  aulasProprias    Aula[]      @relation("AulaDoAluno")
+  atividadesCriadas Atividade[] @relation("AtividadeCriadaPor")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -71,9 +72,19 @@ model Materia {
   cor       CorTema   @default(AZUL)
   arquivada Boolean   @default(false)
 
+  /// Ano e período em que a matéria é cursada.
+  /// O semestre do curso (1 a 10) NÃO é guardado — é derivado por
+  /// `semestreDoCurso()` em src/lib/dominio.ts. Guardar o derivado junto seria
+  /// abrir espaço para os dois discordarem.
+  ano     Int @default(2026)
+  periodo Int @default(2) // 1 ou 2
+
+  /// Presencial tem encontro com data marcada; EaD o aluno faz no ritmo dele.
+  modalidade Modalidade @default(EAD)
+
   criadoPorId String
-  criadoPor   User       @relation("MateriaCriadaPor", fields: [criadoPorId], references: [id])
-  trabalhos   Trabalho[]
+  criadoPor   User        @relation("MateriaCriadaPor", fields: [criadoPorId], references: [id])
+  atividades  Atividade[]
   aulas       Aula[]
 
   criadoEm     DateTime @default(now())
@@ -82,6 +93,7 @@ model Materia {
   @@index([criadoPorId])
   @@index([arquivada])
   @@index([diaSemana])
+  @@index([ano, periodo])
   @@map("materias")
 }
 
@@ -89,23 +101,51 @@ model Materia {
 // TRABALHOS / EVENTOS / AVISOS
 // ─────────────────────────────────────────
 
-/// O que alimenta o mural da tela inicial.
-model Trabalho {
-  id        String    @id @default(cuid())
+/// Atividade acadêmica: o que a turma precisa fazer ou comparecer.
+///
+/// Os quatro tipos moram na mesma tabela com campos anuláveis, e cada
+/// formulário mostra só o que faz sentido para aquele tipo. Quatro tabelas
+/// quase iguais dariam quatro consultas para montar uma lista única — e a
+/// lista única é justamente o ponto da tela inicial.
+model Atividade {
+  id        String        @id @default(cuid())
   titulo    String
-  descricao String?   @db.Text
-  tipo      TipoPost  @default(TRABALHO)
+  descricao String?       @db.Text
+  tipo      TipoAtividade @default(TRABALHO_EXTRA_CLASSE)
+
+  /// Prazo de entrega — usado por TRABALHO_EXTRA_CLASSE.
   entregaEm DateTime?
 
-  /// Arquivado sai do mural mas continua consultável em "Arquivadas".
-  /// Só o ADMIN arquiva, desarquiva e exclui — o aluno apenas lê.
-  arquivado   Boolean   @default(false)
-  arquivadoEm DateTime?
+  /// Quando acontece — usado por EVENTO, SEMINARIO e CONGRESSO.
+  /// `dataFim` só faz sentido em CONGRESSO, que dura mais de um dia.
+  dataInicio DateTime?
+  dataFim    DateTime?
+  horaInicio String?   @db.VarChar(5)
+  horaFim    String?   @db.VarChar(5)
 
-  materiaId   String
-  materia     Materia @relation(fields: [materiaId], references: [id])
+  /// Onde acontece: sala, auditório, endereço ou plataforma.
+  local String?
+
+  /// Inscrição, sala virtual ou local de entrega online.
+  linkExterno String? @db.VarChar(500)
+
+  /// Horas de certificado — CONGRESSO e alguns EVENTOS.
+  cargaHoraria Int?
+
+  /// Quem apresenta junto — trabalho em grupo e SEMINARIO.
+  integrantes String? @db.Text
+
+  /// Arquivada sai do mural mas continua consultável.
+  /// Só o ADMIN arquiva, desarquiva e exclui — o aluno apenas lê.
+  arquivada   Boolean   @default(false)
+  arquivadaEm DateTime?
+
+  /// Matéria é opcional de propósito: congresso e evento externo costumam não
+  /// pertencer a nenhuma.
+  materiaId   String?
+  materia     Materia? @relation(fields: [materiaId], references: [id])
   criadoPorId String
-  criadoPor   User    @relation("TrabalhoCriadoPor", fields: [criadoPorId], references: [id])
+  criadoPor   User     @relation("AtividadeCriadaPor", fields: [criadoPorId], references: [id])
   anexos      Anexo[]
 
   criadoEm     DateTime @default(now())
@@ -113,9 +153,11 @@ model Trabalho {
 
   @@index([materiaId])
   @@index([criadoPorId])
+  @@index([tipo])
   @@index([entregaEm])
-  @@index([arquivado, criadoEm])
-  @@map("trabalhos")
+  @@index([dataInicio])
+  @@index([arquivada, criadoEm])
+  @@map("atividades")
 }
 
 /// Arquivo anexado a um trabalho: foto do quadro, PDF de slides, documento.
@@ -129,12 +171,12 @@ model Anexo {
   tipo     TipoAnexo
   tamanho  Int // bytes
 
-  trabalhoId String
-  trabalho   Trabalho @relation(fields: [trabalhoId], references: [id], onDelete: Cascade)
+  atividadeId String
+  atividade   Atividade @relation(fields: [atividadeId], references: [id], onDelete: Cascade)
 
   criadoEm DateTime @default(now())
 
-  @@index([trabalhoId])
+  @@index([atividadeId])
   @@map("anexos")
 }
 
@@ -147,10 +189,18 @@ enum Role {
   ALUNO
 }
 
-enum TipoPost {
-  TRABALHO
+enum TipoAtividade {
+  TRABALHO_EXTRA_CLASSE
   EVENTO
-  AVISO
+  SEMINARIO
+  CONGRESSO
+}
+
+/// Presencial tem data marcada e vale para a turma toda.
+/// EaD cada aluno organiza no próprio ritmo — por isso o encontro EaD tem dono.
+enum Modalidade {
+  PRESENCIAL
+  EAD
 }
 
 enum TipoAnexo {
@@ -192,8 +242,20 @@ model Aula {
   horaInicio String?  @db.VarChar(5) // "08:00"
   horaFim    String?  @db.VarChar(5) // "10:50"
 
-  /// O que será visto nesse encontro. Alimentado pelo ADMIN.
+  /// O que será visto nesse encontro.
   conteudo String? @db.Text
+
+  modalidade Modalidade @default(PRESENCIAL)
+
+  /// Dono do encontro — o campo que separa as duas agendas.
+  ///
+  /// NULO      = cronograma PRESENCIAL da turma. Só o ADMIN edita, todo mundo vê.
+  /// PREENCHIDO = sessão de estudo EaD daquele aluno. Só ele vê, só ele edita.
+  ///
+  /// Sem isso, o EaD de um colega apareceria na agenda dos outros — e cada um
+  /// estuda EaD no próprio ritmo.
+  donoId String?
+  dono   User?   @relation("AulaDoAluno", fields: [donoId], references: [id], onDelete: Cascade)
 
   materiaId String
   materia   Materia  @relation(fields: [materiaId], references: [id], onDelete: Cascade)
@@ -204,6 +266,8 @@ model Aula {
 
   @@index([materiaId, data])
   @@index([data])
+  @@index([donoId, data])
+  @@index([modalidade, data])
   @@map("aulas")
 }
 
