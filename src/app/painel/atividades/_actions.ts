@@ -5,15 +5,15 @@ import prisma from "@/lib/prisma"
 import { exigirAdmin } from "@/lib/autorizacao"
 import { apagarArquivos } from "@/lib/cloudinary"
 import { atividadeSchema } from "@/lib/validators/atividade"
+import { dataDeEncontro } from "@/lib/datas"
 
 export type Resultado =
   | { ok: true }
   | { ok: false; erro: string; campo?: string }
 
-/** Meio-dia UTC: meia-noite viraria o dia anterior no Brasil. */
 function paraData(iso?: string): Date | null {
   if (!iso) return null
-  return new Date(`${iso}T12:00:00.000Z`)
+  return dataDeEncontro(iso)
 }
 
 function revalidarTelas() {

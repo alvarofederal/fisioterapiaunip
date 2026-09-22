@@ -81,7 +81,7 @@ async function main() {
 
     for (const iso of bloco.datas) {
       // Meio-dia UTC evita que o fuso empurre a data para o dia anterior.
-      const data = new Date(`${iso}T12:00:00.000Z`)
+      const data = new Date(`${iso}T00:00:00.000Z`)
 
       const existente = await prisma.aula.findFirst({
         where: { materiaId: alvo.id, data },

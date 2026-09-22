@@ -22,7 +22,8 @@
     "test:coverage": "vitest run --coverage",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:cronograma": "tsx prisma/seed-cronograma.ts"
+    "db:cronograma": "tsx prisma/seed-cronograma.ts",
+    "db:conteudo-extensao": "tsx prisma/seed-conteudo-extensao.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

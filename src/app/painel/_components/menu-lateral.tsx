@@ -15,7 +15,9 @@ type Papel = "ADMIN" | "ALUNO"
 
 const ITENS = [
   { href: "/painel", rotulo: "Início", icone: Home, exato: true },
-  { href: "/painel/materias", rotulo: "Matérias", icone: BookOpen },
+  // Matérias é cadastro puro: para o aluno não há o que fazer ali, e um item
+  // de menu sem função confunde mais do que ajuda.
+  { href: "/painel/materias", rotulo: "Matérias", icone: BookOpen, somenteAdmin: true },
   { href: "/painel/cronograma", rotulo: "Cronograma", icone: CalendarDays },
   { href: "/painel/atividades", rotulo: "Atividades", icone: ListChecks },
   { href: "/painel/usuarios", rotulo: "Usuários", icone: Users, somenteAdmin: true },

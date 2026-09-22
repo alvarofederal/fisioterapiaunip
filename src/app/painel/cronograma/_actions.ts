@@ -5,6 +5,7 @@ import { z } from "zod"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { exigirAdmin } from "@/lib/autorizacao"
+import { dataDeEncontro } from "@/lib/datas"
 
 export type Resultado = { ok: true } | { ok: false; erro: string }
 
@@ -119,7 +120,7 @@ export async function criarAula(dadosBrutos: unknown): Promise<Resultado> {
 
   const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
   // Meio-dia UTC: evita que o fuso empurre a data para o dia anterior.
-  const dataEncontro = new Date(`${data}T12:00:00.000Z`)
+  const dataEncontro = dataDeEncontro(data)
 
   const jaExiste = await prisma.aula.findFirst({
     where: { materiaId, data: dataEncontro },
@@ -197,7 +198,7 @@ export async function atualizarAula(
   if (!existente) return { ok: false, erro: "Encontro não encontrado." }
 
   const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
-  const dataEncontro = new Date(`${data}T12:00:00.000Z`)
+  const dataEncontro = dataDeEncontro(data)
 
   // Mesma matéria, mesma data, outro id = duplicata.
   const conflito = await prisma.aula.findFirst({
@@ -291,7 +292,7 @@ export async function criarAulaEaD(dadosBrutos: unknown): Promise<Resultado> {
     return { ok: false, erro: "Esta matéria é presencial — o cronograma dela é da turma." }
   }
 
-  const dataEncontro = new Date(`${data}T12:00:00.000Z`)
+  const dataEncontro = dataDeEncontro(data)
 
   const jaExiste = await prisma.aula.findFirst({
     where: { materiaId, data: dataEncontro, donoId: sessao.user.id },
