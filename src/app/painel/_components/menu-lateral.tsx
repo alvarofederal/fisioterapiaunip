@@ -15,9 +15,16 @@ type Papel = "ADMIN" | "ALUNO"
 
 const ITENS = [
   { href: "/painel", rotulo: "Início", icone: Home, exato: true },
-  // Matérias é cadastro puro: para o aluno não há o que fazer ali, e um item
-  // de menu sem função confunde mais do que ajuda.
-  { href: "/painel/materias", rotulo: "Matérias", icone: BookOpen, somenteAdmin: true },
+  // Mesma tela, nome diferente conforme quem olha: para o ADMIN é onde se
+  // cadastra matéria, semestre e unidade; para o aluno é onde ele marca o que
+  // estudou e escreve os resumos. Já foi só do ADMIN, quando ali de fato não
+  // havia nada para o aluno fazer.
+  {
+    href: "/painel/materias",
+    rotulo: "Matérias",
+    rotuloAluno: "Meus estudos",
+    icone: BookOpen,
+  },
   { href: "/painel/cronograma", rotulo: "Cronograma", icone: CalendarDays },
   { href: "/painel/atividades", rotulo: "Atividades", icone: ListChecks },
   { href: "/painel/usuarios", rotulo: "Usuários", icone: Users, somenteAdmin: true },
@@ -50,6 +57,8 @@ export function MenuLateral({
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {itens.map(({ href, rotulo, icone: Icone, ...resto }) => {
           const exato = "exato" in resto ? resto.exato : false
+          const nome =
+            role === "ALUNO" && "rotuloAluno" in resto ? resto.rotuloAluno : rotulo
           const ativo = exato ? caminho === href : caminho.startsWith(href)
           const mostrarSelo = href === "/painel/usuarios" && pendentes > 0
 
@@ -67,7 +76,7 @@ export function MenuLateral({
               )}
             >
               <Icone size={18} aria-hidden />
-              <span className="flex-1">{rotulo}</span>
+              <span className="flex-1">{nome}</span>
               {mostrarSelo && (
                 <Badge
                   variant={ativo ? "secondary" : "default"}

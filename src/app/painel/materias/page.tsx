@@ -14,7 +14,18 @@ import { DialogoMateria, type SemestreOpcao } from "./_components/dialogo-materi
 import { DialogoSemestre } from "./_components/dialogo-semestre"
 import { AcoesMateria } from "./_components/acoes-materia"
 
-export const metadata = { title: "Matérias" }
+// O título da aba acompanha o nome do menu — "Meus estudos" no menu e
+// "Matérias" na aba deixaria o aluno na dúvida se chegou no lugar certo.
+export async function generateMetadata() {
+  const sessao = await auth()
+  if (!sessao?.user?.id) return { title: "Matérias" }
+
+  const eu = await prisma.user.findUnique({
+    where: { id: sessao.user.id },
+    select: { role: true },
+  })
+  return { title: eu?.role === "ADMIN" ? "Matérias" : "Meus estudos" }
+}
 
 export default async function PaginaMaterias({
   searchParams,
@@ -73,11 +84,15 @@ export default async function PaginaMaterias({
     <div className="flex flex-col gap-7">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="titulo-display text-[30px] md:text-[38px]">Matérias</h1>
+          <h1 className="titulo-display text-[30px] md:text-[38px]">
+            {ehAdmin ? "Matérias" : "Meus estudos"}
+          </h1>
           <p className="mt-2 text-[15px] text-fog">
             {totalAtivas === 0
               ? "Nenhuma matéria cadastrada"
-              : `${totalAtivas} ${totalAtivas === 1 ? "matéria" : "matérias"} no curso`}
+              : ehAdmin
+                ? `${totalAtivas} ${totalAtivas === 1 ? "matéria" : "matérias"} no curso`
+                : "Abra uma matéria para marcar o que já estudou e escrever seus resumos."}
           </p>
         </div>
         {ehAdmin && (
