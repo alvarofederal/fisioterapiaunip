@@ -4,12 +4,8 @@ import { ListChecks, Archive } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
-import {
-  ORDEM_TIPOS_ATIVIDADE,
-  TIPOS_ATIVIDADE,
-  dataQueImporta,
-  diasAte,
-} from "@/lib/dominio"
+import { ORDEM_TIPOS_ATIVIDADE, TIPOS_ATIVIDADE } from "@/lib/dominio"
+import { separarAtividades } from "@/lib/atividades"
 import type { TipoAtividade } from "@/generated/prisma"
 import { CardAtividade, type AtividadeDoMural } from "../_components/card-atividade"
 import { DialogoAtividade } from "./_components/dialogo-atividade"
@@ -60,14 +56,49 @@ export default async function PaginaAtividades({
   const totalAtivas = contagens.reduce((soma, linha) => soma + linha._count, 0)
   const contagemPorTipo = new Map(contagens.map((c) => [c.tipo, c._count]))
 
-  const ordenadas: AtividadeDoMural[] = [...atividades].sort((a, b) => {
-    const da = dataQueImporta(a)
-    const db = dataQueImporta(b)
-    if (!da && !db) return b.criadoEm.getTime() - a.criadoEm.getTime()
-    if (!da) return 1
-    if (!db) return -1
-    return da.getTime() - db.getTime()
-  })
+  // Regra única em src/lib/atividades.ts, com teste: o próximo a vencer abre a
+  // lista e o que já passou desce.
+  const { aFazer, jaPassaram } = separarAtividades<AtividadeDoMural>(atividades)
+  const total = aFazer.length + jaPassaram.length
+
+  // Os dois blocos montam o card do mesmo jeito, com as mesmas ações de ADMIN.
+  const renderizar = (atividade: AtividadeDoMural) => (
+    <CardAtividade
+      key={atividade.id}
+      atividade={atividade}
+      acoes={
+        ehAdmin ? (
+          <AcoesAtividade
+            materias={materias}
+            arquivada={atividade.arquivada}
+            atividade={{
+              id: atividade.id,
+              tipo: atividade.tipo,
+              titulo: atividade.titulo,
+              descricao: atividade.descricao,
+              materiaId: atividade.materiaId,
+              entregaEm: atividade.entregaEm,
+              dataInicio: atividade.dataInicio,
+              dataFim: atividade.dataFim,
+              horaInicio: atividade.horaInicio,
+              horaFim: atividade.horaFim,
+              local: atividade.local,
+              linkExterno: atividade.linkExterno,
+              cargaHoraria: atividade.cargaHoraria,
+              integrantes: atividade.integrantes,
+              anexos: atividade.anexos.map((x) => ({
+                nome: x.nome,
+                url: x.url,
+                publicId: x.publicId,
+                tipo: x.tipo,
+                tamanho: x.tamanho,
+              })),
+            }}
+          />
+        ) : undefined
+      }
+    />
+  )
 
   return (
     <div className="flex flex-col gap-7">
@@ -129,7 +160,7 @@ export default async function PaginaAtividades({
         </p>
       )}
 
-      {ordenadas.length === 0 ? (
+      {total === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-blurple/15 text-hover-blurple">
             {vendoArquivadas ? <Archive size={26} aria-hidden /> : <ListChecks size={26} aria-hidden />}
@@ -146,48 +177,24 @@ export default async function PaginaAtividades({
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
-          {ordenadas.map((atividade) => {
-            const data = dataQueImporta(atividade)
-            const passou = data ? diasAte(data) < 0 : false
-            return (
-              <CardAtividade
-                key={atividade.id}
-                atividade={atividade}
-                acoes={
-                  ehAdmin ? (
-                    <AcoesAtividade
-                      materias={materias}
-                      arquivada={atividade.arquivada}
-                      atividade={{
-                        id: atividade.id,
-                        tipo: atividade.tipo,
-                        titulo: atividade.titulo,
-                        descricao: atividade.descricao,
-                        materiaId: atividade.materiaId,
-                        entregaEm: atividade.entregaEm,
-                        dataInicio: atividade.dataInicio,
-                        dataFim: atividade.dataFim,
-                        horaInicio: atividade.horaInicio,
-                        horaFim: atividade.horaFim,
-                        local: atividade.local,
-                        linkExterno: atividade.linkExterno,
-                        cargaHoraria: atividade.cargaHoraria,
-                        integrantes: atividade.integrantes,
-                        anexos: atividade.anexos.map((x) => ({
-                          nome: x.nome,
-                          url: x.url,
-                          publicId: x.publicId,
-                          tipo: x.tipo,
-                          tamanho: x.tamanho,
-                        })),
-                      }}
-                    />
-                  ) : undefined
-                }
-              />
-            )
-          })}
+        <div className="flex flex-col gap-10">
+          {aFazer.length > 0 && (
+            <section className="flex flex-col gap-4">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
+                A fazer · {aFazer.length}
+              </h2>
+              {aFazer.map(renderizar)}
+            </section>
+          )}
+
+          {jaPassaram.length > 0 && (
+            <section className="flex flex-col gap-4">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
+                Já passou · {jaPassaram.length}
+              </h2>
+              {jaPassaram.map(renderizar)}
+            </section>
+          )}
         </div>
       )}
     </div>

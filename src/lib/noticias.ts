@@ -2,7 +2,7 @@
 import "server-only"
 
 import prisma from "./prisma"
-import { diasAte } from "./dominio"
+import { separarAtividades } from "./atividades"
 import type { NoticiaPublica } from "@/components/card-noticia"
 
 /**
@@ -47,29 +47,9 @@ export async function buscarNoticias(limite = 40): Promise<{
     criadoEm: a.criadoEm,
   }))
 
-  const dataDe = (n: NoticiaPublica) => n.entregaEm ?? n.dataInicio
+  // Mesma ordenação do mural de dentro: quem olha de fora e quem olha de
+  // dentro têm que ver a mesma coisa na mesma ordem.
+  const { aFazer, jaPassaram } = separarAtividades(noticias)
 
-  // Sem data nenhuma conta como "próxima": é aviso em aberto, não coisa vencida.
-  const proximas = noticias
-    .filter((n) => {
-      const d = dataDe(n)
-      return d === null || diasAte(d) >= 0
-    })
-    .sort((a, b) => {
-      const da = dataDe(a)
-      const db = dataDe(b)
-      if (!da && !db) return b.criadoEm.getTime() - a.criadoEm.getTime()
-      if (!da) return 1
-      if (!db) return -1
-      return da.getTime() - db.getTime()
-    })
-
-  const passadas = noticias
-    .filter((n) => {
-      const d = dataDe(n)
-      return d !== null && diasAte(d) < 0
-    })
-    .sort((a, b) => dataDe(b)!.getTime() - dataDe(a)!.getTime())
-
-  return { proximas, passadas }
+  return { proximas: aFazer, passadas: jaPassaram }
 }

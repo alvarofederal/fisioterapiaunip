@@ -3,6 +3,7 @@ import { ListChecks, CalendarDays, CircleAlert } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { dataQueImporta, diasAte, textoDeProximidade } from "@/lib/dominio"
+import { separarAtividades } from "@/lib/atividades"
 import { CardAtividade, type AtividadeDoMural } from "./_components/card-atividade"
 
 export const metadata = { title: "Início" }
@@ -36,27 +37,14 @@ export default async function MuralDaTurma() {
     }),
   ])
 
-  // Ordena pela data que importa (prazo ou dia do evento); sem data vai para o fim.
-  const ordenadas: AtividadeDoMural[] = [...atividades].sort((a, b) => {
-    const da = dataQueImporta(a)
-    const db = dataQueImporta(b)
-    if (!da && !db) return b.criadoEm.getTime() - a.criadoEm.getTime()
-    if (!da) return 1
-    if (!db) return -1
-    return da.getTime() - db.getTime()
-  })
+  // Regra única em src/lib/atividades.ts, com teste: o próximo a vencer abre
+  // a lista e o que já passou desce.
+  const { aFazer, jaPassaram } = separarAtividades<AtividadeDoMural>(atividades)
+  const total = aFazer.length + jaPassaram.length
 
-  const aVencer = ordenadas.filter((a) => {
+  const urgentes = aFazer.filter((a) => {
     const data = dataQueImporta(a)
-    return data !== null && diasAte(data) >= 0
-  })
-  const vencidas = ordenadas.filter((a) => {
-    const data = dataQueImporta(a)
-    return data !== null && diasAte(data) < 0
-  })
-  const urgentes = aVencer.filter((a) => {
-    const data = dataQueImporta(a)!
-    return diasAte(data) <= 7
+    return data !== null && diasAte(data) <= 7
   })
 
   return (
@@ -127,13 +115,13 @@ export default async function MuralDaTurma() {
             No mural
           </div>
           <p className="titulo-display text-[34px] tabular-nums text-hover-blurple">
-            {ordenadas.length}
+            {total}
           </p>
           <p className="mt-1 text-[12px] text-greyple">Atividades publicadas</p>
         </article>
       </section>
 
-      {ordenadas.length === 0 ? (
+      {total === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-blurple/15 text-hover-blurple">
             <ListChecks size={26} aria-hidden />
@@ -152,23 +140,23 @@ export default async function MuralDaTurma() {
         </div>
       ) : (
         <>
-          {aVencer.length > 0 && (
+          {aFazer.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                A fazer · {aVencer.length}
+                A fazer · {aFazer.length}
               </h2>
-              {aVencer.map((atividade) => (
+              {aFazer.map((atividade) => (
                 <CardAtividade key={atividade.id} atividade={atividade} />
               ))}
             </section>
           )}
 
-          {vencidas.length > 0 && (
+          {jaPassaram.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                Já passou · {vencidas.length}
+                Já passou · {jaPassaram.length}
               </h2>
-              {vencidas.map((atividade) => (
+              {jaPassaram.map((atividade) => (
                 <CardAtividade key={atividade.id} atividade={atividade} />
               ))}
             </section>
