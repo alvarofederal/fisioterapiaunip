@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!--
+    Marca do portal: quadrado blurple com a linha de pulso.
+    O traço é bem mais grosso do que o ícone da interface (6px num
+    viewBox de 64) porque em 16px, que é o tamanho real na aba do
+    navegador, traço fino vira borrão cinza.
+  -->
+  <rect width="64" height="64" rx="15" fill="#5865F2"/>
+  <path
+    d="M10 32h9l6-14 10 28 6-14h13"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
