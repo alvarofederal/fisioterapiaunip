@@ -4,6 +4,10 @@ import {
   ordenarAtividades,
   jaPassou,
   dataDeEncerramento,
+  usaCarimbo,
+  marcosCumpridos,
+  MARCOS_DO_TRABALHO,
+  TRABALHO_SEM_MARCO,
 } from "@/lib/atividades"
 import { dataDeEncontro } from "@/lib/datas"
 
@@ -175,5 +179,38 @@ describe("ordenarAtividades", () => {
 
   it("lista vazia não quebra", () => {
     expect(ordenarAtividades([], HOJE)).toEqual([])
+  })
+})
+
+describe("marcos do trabalho presencial", () => {
+  const presencial = { modalidade: "PRESENCIAL" as const }
+  const ead = { modalidade: "EAD" as const }
+
+  it("trabalho de matéria presencial tem carimbo e correção", () => {
+    expect(usaCarimbo({ tipo: "TRABALHO_EXTRA_CLASSE", materia: presencial })).toBe(true)
+  })
+
+  it("trabalho de matéria EaD não tem — não existe folha para carimbar", () => {
+    expect(usaCarimbo({ tipo: "TRABALHO_EXTRA_CLASSE", materia: ead })).toBe(false)
+  })
+
+  it("evento e congresso não têm, mesmo sendo presenciais", () => {
+    expect(usaCarimbo({ tipo: "EVENTO", materia: presencial })).toBe(false)
+    expect(usaCarimbo({ tipo: "CONGRESSO", materia: presencial })).toBe(false)
+    expect(usaCarimbo({ tipo: "SEMINARIO", materia: presencial })).toBe(false)
+  })
+
+  it("trabalho sem matéria não quebra", () => {
+    expect(usaCarimbo({ tipo: "TRABALHO_EXTRA_CLASSE", materia: null })).toBe(false)
+  })
+
+  it("conta os marcos cumpridos", () => {
+    expect(marcosCumpridos(TRABALHO_SEM_MARCO)).toBe(0)
+    expect(marcosCumpridos({ carimbado: true, corrigido: false })).toBe(1)
+    expect(marcosCumpridos({ carimbado: true, corrigido: true })).toBe(2)
+  })
+
+  it("a ordem é a da vida real: carimbo antes de correção", () => {
+    expect(MARCOS_DO_TRABALHO.map((m) => m.campo)).toEqual(["carimbado", "corrigido"])
   })
 })

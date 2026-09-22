@@ -33,12 +33,13 @@ model User {
   ativo        Boolean   @default(false)
   ultimoAcesso DateTime?
 
-  materiasCriadas   Materia[]          @relation("MateriaCriadaPor")
-  progressosUnidade ProgressoUnidade[] @relation("ProgressoDoUsuario")
-  estudosTeleaula   EstudoTeleaula[]   @relation("EstudoTeleaulaDoUsuario")
-  estudos           Estudo[]           @relation("EstudoDoUsuario")
-  aulasProprias     Aula[]             @relation("AulaDoAluno")
-  atividadesCriadas Atividade[]        @relation("AtividadeCriadaPor")
+  materiasCriadas     Materia[]            @relation("MateriaCriadaPor")
+  progressosUnidade   ProgressoUnidade[]   @relation("ProgressoDoUsuario")
+  estudosTeleaula     EstudoTeleaula[]     @relation("EstudoTeleaulaDoUsuario")
+  progressosAtividade ProgressoAtividade[] @relation("ProgressoAtividadeDoUsuario")
+  estudos             Estudo[]             @relation("EstudoDoUsuario")
+  aulasProprias       Aula[]               @relation("AulaDoAluno")
+  atividadesCriadas   Atividade[]          @relation("AtividadeCriadaPor")
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -146,10 +147,11 @@ model Atividade {
   /// Matéria é opcional de propósito: congresso e evento externo costumam não
   /// pertencer a nenhuma.
   materiaId   String?
-  materia     Materia? @relation(fields: [materiaId], references: [id])
+  materia     Materia?             @relation(fields: [materiaId], references: [id])
   criadoPorId String
-  criadoPor   User     @relation("AtividadeCriadaPor", fields: [criadoPorId], references: [id])
+  criadoPor   User                 @relation("AtividadeCriadaPor", fields: [criadoPorId], references: [id])
   anexos      Anexo[]
+  progressos  ProgressoAtividade[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -427,4 +429,30 @@ model EstudoTeleaula {
   @@unique([teleaulaId, usuarioId])
   @@index([usuarioId, status])
   @@map("estudos_teleaula")
+}
+
+/// O que ESTE aluno já cumpriu neste trabalho.
+///
+/// Carimbo e correção são do trabalho presencial: o aluno leva a folha, o
+/// professor carimba na entrega e devolve corrigida mais tarde. São estados da
+/// folha de cada um — a turma inteira não é carimbada junto —, por isso ficam
+/// por aluno, do mesmo jeito que `Estudo` e `ProgressoUnidade`.
+///
+/// Os rótulos e a ordem ficam em `MARCOS_DO_TRABALHO` (src/lib/dominio.ts).
+model ProgressoAtividade {
+  id        String  @id @default(cuid())
+  carimbado Boolean @default(false)
+  corrigido Boolean @default(false)
+
+  atividadeId String
+  atividade   Atividade @relation(fields: [atividadeId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  usuario     User      @relation("ProgressoAtividadeDoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([atividadeId, usuarioId])
+  @@index([usuarioId])
+  @@map("progressos_atividade")
 }

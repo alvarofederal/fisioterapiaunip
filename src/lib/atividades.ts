@@ -1,4 +1,5 @@
 // src/lib/atividades.ts
+import type { Modalidade, TipoAtividade } from "@/generated/prisma"
 import { dataQueImporta, diasAte } from "./dominio"
 
 /**
@@ -86,4 +87,51 @@ export function ordenarAtividades<T extends AtividadeOrdenavel>(
 ): T[] {
   const { aFazer, jaPassaram } = separarAtividades(itens, referencia)
   return [...aFazer, ...jaPassaram]
+}
+
+// ─── Marcos do trabalho presencial ───────────────────────────────
+
+/**
+ * Carimbo e correção, na ordem em que acontecem.
+ *
+ * A tela percorre esta lista em vez de citar a coluna na mão, pelo mesmo
+ * motivo de `ITENS_DA_UNIDADE`: um marco novo é uma linha aqui, não um `if`
+ * espalhado.
+ */
+export const MARCOS_DO_TRABALHO = [
+  { campo: "carimbado", rotulo: "Carimbo", ajuda: "O professor carimbou na entrega" },
+  { campo: "corrigido", rotulo: "Correção", ajuda: "Voltou corrigido" },
+] as const
+
+export type MarcoDoTrabalho = (typeof MARCOS_DO_TRABALHO)[number]["campo"]
+
+/** O que fica marcado por trabalho, para cada aluno. */
+export type ProgressoDoTrabalho = Record<MarcoDoTrabalho, boolean>
+
+export const TRABALHO_SEM_MARCO: ProgressoDoTrabalho = {
+  carimbado: false,
+  corrigido: false,
+}
+
+/**
+ * Se este trabalho tem carimbo e correção para marcar.
+ *
+ * Só faz sentido em trabalho que se entrega em mão: o aluno leva a folha, o
+ * professor carimba e devolve corrigida. Em matéria EaD não há folha nem
+ * carimbo. A regra sai da modalidade da matéria, que já é dado — citar
+ * "Anatomia" pelo nome quebraria na primeira matéria presencial nova.
+ */
+export function usaCarimbo(atividade: {
+  tipo: TipoAtividade
+  materia: { modalidade: Modalidade } | null
+}): boolean {
+  return (
+    atividade.tipo === "TRABALHO_EXTRA_CLASSE" &&
+    atividade.materia?.modalidade === "PRESENCIAL"
+  )
+}
+
+/** Quantos marcos deste trabalho o aluno já cumpriu. */
+export function marcosCumpridos(progresso: ProgressoDoTrabalho): number {
+  return MARCOS_DO_TRABALHO.filter(({ campo }) => progresso[campo]).length
 }
