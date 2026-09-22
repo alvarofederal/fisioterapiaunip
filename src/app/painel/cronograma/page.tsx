@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { CalendarDays, Target, ChevronDown, Users, Laptop, CircleSlash } from "lucide-react"
+import { CalendarDays, Target, ChevronDown, Users, CircleSlash } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
@@ -29,10 +29,9 @@ export default async function PaginaCronograma({
       orderBy: { nome: "asc" },
     }),
     prisma.aula.findMany({
-      // A barreira entre as duas agendas: encontro sem dono é o presencial da
-      // turma; com dono, só aparece para o próprio. Sem este OR, o EaD de um
-      // colega entraria no cronograma de todo mundo.
-      where: { OR: [{ donoId: null }, { donoId: sessao.user.id }] },
+      // O cronograma é só do presencial da turma. O EaD saiu daqui e virou
+      // Unidades e Teleaulas dentro da matéria, onde ele tem a forma do AVA.
+      where: { donoId: null },
       include: {
         materia: { select: { id: true, nome: true, cor: true, professor: true } },
         estudos: {
@@ -45,7 +44,6 @@ export default async function PaginaCronograma({
   ])
 
   const ehAdmin = eu?.role === "ADMIN"
-  const materiasEaD = materias.filter((m) => m.modalidade === "EAD")
   const materiasPresenciais = materias.filter((m) => m.modalidade === "PRESENCIAL")
 
   const todas: AulaDoCronograma[] = aulas.map((aula) => ({
@@ -66,7 +64,7 @@ export default async function PaginaCronograma({
 
   // Regras em src/lib/cronograma.ts, com teste: o que já passou sai da lista
   // principal sozinho, sem depender de clique.
-  const { foco, presenciais, ead, feitas, naoFeitas, revisadas, percentual } =
+  const { foco, presenciais, feitas, naoFeitas, revisadas, percentual } =
     agruparCronograma(visiveis, todas)
 
   const materiaAtual = materias.find((m) => m.id === materiaFiltro)
@@ -81,12 +79,9 @@ export default async function PaginaCronograma({
             {todas.length} encontros · {revisadas} revisados
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {materiasEaD.length > 0 && <DialogoAula materias={materiasEaD} ead />}
-          {ehAdmin && materiasPresenciais.length > 0 && (
-            <DialogoAula materias={materiasPresenciais} />
-          )}
-        </div>
+        {ehAdmin && materiasPresenciais.length > 0 && (
+          <DialogoAula materias={materiasPresenciais} />
+        )}
       </header>
 
       {todas.length > 0 && (
@@ -154,21 +149,6 @@ export default async function PaginaCronograma({
             cor="#5865f2"
           />
 
-          <Secao
-            icone={Laptop}
-            titulo="Meu EaD"
-            sublinha="Só você vê o que marcou aqui"
-            aulas={ead}
-            ehAdmin={ehAdmin}
-            materias={materias}
-            cor="#00b0f4"
-            vazio={
-              materiasEaD.length > 0
-                ? "Marque quando pretende estudar cada matéria do AVA."
-                : undefined
-            }
-          />
-
           {/* O que passou, arquivado sozinho. Não estudadas primeiro, com cor
               própria, porque ainda dá para voltar e fazer. */}
           {historico.length > 0 && (
@@ -223,7 +203,7 @@ export default async function PaginaCronograma({
             </details>
           )}
 
-          {presenciais.length === 0 && ead.length === 0 && !foco && (
+          {presenciais.length === 0 && !foco && (
             <p className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-5 py-8 text-center text-[15px] text-fog">
               {materiaAtual
                 ? "Nada marcado para o futuro nesta matéria."
@@ -292,8 +272,8 @@ function Vazio({ ehAdmin }: { ehAdmin: boolean }) {
       <h2 className="titulo-display text-[20px]">Cronograma vazio</h2>
       <p className="max-w-[420px] text-[15px] leading-relaxed text-fog">
         {ehAdmin
-          ? "Monte o cronograma presencial e marque seus estudos de EaD."
-          : "O presencial aparece quando o administrador montar. O EaD você marca quando quiser."}
+          ? "Monte o cronograma presencial da turma. O EaD fica nas Unidades de cada matéria."
+          : "Aparece quando o administrador montar. O EaD fica nas Unidades de cada matéria."}
       </p>
     </div>
   )

@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { criarAula, atualizarAula, criarAulaEaD } from "../_actions"
+import { criarAula, atualizarAula } from "../_actions"
 
 type MateriaOpcao = { id: string; nome: string }
 
@@ -34,12 +34,9 @@ function paraInput(data: Date): string {
 export function DialogoAula({
   materias,
   aula,
-  ead,
 }: {
   materias: MateriaOpcao[]
   aula?: AulaEditavel
-  /** Modo aluno: marca estudo próprio de matéria do AVA. */
-  ead?: boolean
 }) {
   const editando = Boolean(aula)
   const router = useRouter()
@@ -65,21 +62,13 @@ export function DialogoAula({
     evento.preventDefault()
 
     iniciar(async () => {
-      const r = aula
-        ? await atualizarAula(aula.id, dados)
-        : ead
-          ? await criarAulaEaD(dados)
-          : await criarAula(dados)
+      const r = aula ? await atualizarAula(aula.id, dados) : await criarAula(dados)
       if (!r.ok) {
         toast.error(r.erro)
         return
       }
       toast.success(
-        editando
-          ? "Encontro corrigido."
-          : ead
-            ? "Estudo marcado na sua agenda."
-            : "Encontro adicionado ao cronograma."
+        editando ? "Encontro corrigido." : "Encontro adicionado ao cronograma."
       )
       setAberto(false)
       if (!editando) setDados({ ...dados, data: "", conteudo: "" })
@@ -103,16 +92,9 @@ export function DialogoAula({
             Corrigir
           </button>
         ) : (
-          <button
-            type="button"
-            className={
-              ead
-                ? "inline-flex items-center gap-2 rounded-xl border border-vivid-cerulean/40 bg-vivid-cerulean/10 px-4 py-3 text-[15px] font-medium text-vivid-cerulean transition-colors hover:bg-vivid-cerulean/20"
-                : "btn-primario"
-            }
-          >
+          <button type="button" className="btn-primario">
             <CalendarPlus size={17} aria-hidden />
-            {ead ? "Marcar estudo EaD" : "Novo encontro"}
+            Novo encontro
           </button>
         )}
       </DialogTrigger>
@@ -120,14 +102,12 @@ export function DialogoAula({
       <DialogContent className="max-h-[92vh] overflow-y-auto border-white/10 bg-[#1a1b3a] sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="titulo-display text-[22px]">
-            {editando ? "Corrigir encontro" : ead ? "Marcar estudo EaD" : "Novo encontro"}
+            {editando ? "Corrigir encontro" : "Novo encontro"}
           </DialogTitle>
           <DialogDescription className="text-fog">
             {editando
               ? "As anotações de estudo da turma neste encontro continuam salvas."
-              : ead
-                ? "Quando você pretende estudar essa matéria do AVA. Só você vê."
-                : "Uma data do cronograma. A turma toda vê; cada um marca o próprio estudo."}
+              : "Uma data do cronograma. A turma toda vê; cada um marca o próprio estudo."}
           </DialogDescription>
         </DialogHeader>
 
