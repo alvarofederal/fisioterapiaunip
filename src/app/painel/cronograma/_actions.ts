@@ -119,7 +119,6 @@ export async function criarAula(dadosBrutos: unknown): Promise<Resultado> {
   }
 
   const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
-  // Meio-dia UTC: evita que o fuso empurre a data para o dia anterior.
   const dataEncontro = dataDeEncontro(data)
 
   const jaExiste = await prisma.aula.findFirst({

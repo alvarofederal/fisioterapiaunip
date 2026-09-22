@@ -56,8 +56,10 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
 7. **Anexo guarda `publicId`** do Cloudinary — sem ele não há como apagar o arquivo remoto.
 8. **Limite de anexo: 4 MB.** Função serverless da Vercel não aceita corpo maior que ~4,5 MB.
 9. **Vocabulário cresce por dado**, em `src/lib/dominio.ts` — nunca por `if/else` nas telas.
-9b. **Data de encontro grava meio-dia UTC** (`T12:00:00.000Z`) e é lida com `timeZone: "UTC"`.
-   Meia-noite UTC vira o dia anterior no Brasil — 17/10 apareceria como 16/10.
+9b. **Data de encontro grava meia-noite UTC**, sempre por `dataDeEncontro()` de `src/lib/datas.ts`,
+   e é lida com `timeZone: "UTC"`. A coluna é `@db.Date` e devolve meia-noite: quando o código
+   gravava meio-dia, a trava de duplicata comparava valores diferentes e nunca casava.
+   Nunca construa a data à mão, e nunca formate sem `timeZone: "UTC"` — sem isso 17/10 vira 16/10.
 9c. **Cronograma é da turma, estudo é de cada um.** Conteúdo do encontro só o ADMIN edita;
    status e anotações de estudo são por usuário (`Estudo`, único por aula+usuário).
 10. **Visual segue o `DESIGN.md`** (referência Discord): tema escuro `#0e0f2d`, display SEMPRE

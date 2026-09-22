@@ -8,6 +8,7 @@
  * data nova insere só a que falta.
  */
 import { PrismaClient } from "../src/generated/prisma"
+import { dataDeEncontro } from "../src/lib/datas"
 
 const prisma = new PrismaClient()
 
@@ -80,8 +81,7 @@ async function main() {
     console.log(`  ${bloco.horaInicio} às ${bloco.horaFim}`)
 
     for (const iso of bloco.datas) {
-      // Meio-dia UTC evita que o fuso empurre a data para o dia anterior.
-      const data = new Date(`${iso}T00:00:00.000Z`)
+      const data = dataDeEncontro(iso)
 
       const existente = await prisma.aula.findFirst({
         where: { materiaId: alvo.id, data },

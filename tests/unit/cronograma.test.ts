@@ -7,9 +7,10 @@ import {
   ORDEM_STATUS,
   STATUS_ESTUDO,
 } from "@/lib/dominio"
+import { dataDeEncontro } from "@/lib/datas"
 
-/** Data do cronograma, gravada como meio-dia UTC. */
-const emUTC = (iso: string) => new Date(`${iso}T12:00:00.000Z`)
+/** Data do cronograma, do jeito que a produção grava: meia-noite UTC. */
+const emUTC = dataDeEncontro
 
 describe("diasAte", () => {
   const hoje = new Date("2026-09-21T09:00:00")

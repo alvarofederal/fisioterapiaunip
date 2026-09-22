@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { agruparCronograma, type ItemCronograma } from "@/lib/cronograma"
 import type { Modalidade, StatusEstudo } from "@/generated/prisma"
+import { dataDeEncontro } from "@/lib/datas"
 
 const HOJE = new Date("2026-09-21T09:00:00")
 
@@ -10,7 +11,9 @@ function encontro(
 ): ItemCronograma & { iso: string } {
   return {
     iso,
-    data: new Date(`${iso}T12:00:00.000Z`),
+    // A mesma função que a produção usa: fixture com outra convenção de hora
+    // esconderia justamente o bug de comparação que datas.ts existe para evitar.
+    data: dataDeEncontro(iso),
     modalidade: opcoes.modalidade ?? "PRESENCIAL",
     meuEstudo: opcoes.status ? { status: opcoes.status } : null,
   }
