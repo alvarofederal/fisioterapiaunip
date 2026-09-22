@@ -30,7 +30,7 @@ export default async function PaginaMaterias({
   const [materias, totalAtivas, totalArquivadas] = await Promise.all([
     prisma.materia.findMany({
       where: { arquivada: vendoArquivadas },
-      include: { _count: { select: { trabalhos: true } } },
+      include: { _count: { select: { atividades: true } } },
     }),
     prisma.materia.count({ where: { arquivada: false } }),
     prisma.materia.count({ where: { arquivada: true } }),
@@ -84,7 +84,7 @@ export default async function PaginaMaterias({
             {vendoArquivadas
               ? "Matérias arquivadas ficam guardadas aqui."
               : ehAdmin
-                ? "Cadastre a primeira matéria do semestre. Depois é só publicar os trabalhos dela."
+                ? "Cadastre a primeira matéria do semestre. Depois é só publicar as atividades dela."
                 : "Assim que o administrador cadastrar as matérias, elas aparecem aqui."}
           </p>
           {ehAdmin && !vendoArquivadas && <DialogoMateria />}
@@ -131,10 +131,10 @@ export default async function PaginaMaterias({
 
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
                   <p className="text-[12px] text-greyple">
-                    {materia._count.trabalhos === 0
-                      ? "Nenhum trabalho"
-                      : `${materia._count.trabalhos} ${
-                          materia._count.trabalhos === 1 ? "trabalho" : "trabalhos"
+                    {materia._count.atividades === 0
+                      ? "Nenhuma atividade"
+                      : `${materia._count.atividades} ${
+                          materia._count.atividades === 1 ? "atividade" : "atividades"
                         }`}
                   </p>
                   {ehAdmin && (
@@ -148,7 +148,7 @@ export default async function PaginaMaterias({
                         cor: materia.cor,
                       }}
                       arquivada={materia.arquivada}
-                      temTrabalhos={materia._count.trabalhos > 0}
+                      temAtividades={materia._count.atividades > 0}
                     />
                   )}
                 </div>

@@ -103,7 +103,7 @@ export async function atualizarMateria(
   return { ok: true }
 }
 
-/** Arquivar tira da lista sem apagar — os trabalhos ligados continuam intactos. */
+/** Arquivar tira da lista sem apagar — as atividades ligadas continuam intactas. */
 export async function arquivarMateria(id: string, arquivar: boolean): Promise<Resultado> {
   const permissao = await exigirAdmin()
   if (!permissao.ok) return { ok: false, erro: permissao.erro }
@@ -133,15 +133,15 @@ export async function excluirMateria(id: string): Promise<Resultado> {
 
   const materia = await prisma.materia.findUnique({
     where: { id },
-    select: { _count: { select: { trabalhos: true } } },
+    select: { _count: { select: { atividades: true } } },
   })
   if (!materia) return { ok: false, erro: "Matéria não encontrada." }
 
-  if (materia._count.trabalhos > 0) {
+  if (materia._count.atividades > 0) {
     return {
       ok: false,
-      erro: `Esta matéria tem ${materia._count.trabalhos} ${
-        materia._count.trabalhos === 1 ? "trabalho publicado" : "trabalhos publicados"
+      erro: `Esta matéria tem ${materia._count.atividades} ${
+        materia._count.atividades === 1 ? "atividade publicada" : "atividades publicadas"
       }. Arquive em vez de excluir, para não perder o histórico.`,
     }
   }

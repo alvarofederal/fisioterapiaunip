@@ -20,11 +20,11 @@ import { DialogoMateria, type MateriaEditavel } from "./dialogo-materia"
 export function AcoesMateria({
   materia,
   arquivada,
-  temTrabalhos,
+  temAtividades,
 }: {
   materia: MateriaEditavel
   arquivada: boolean
-  temTrabalhos: boolean
+  temAtividades: boolean
 }) {
   const router = useRouter()
   const [processando, iniciar] = useTransition()
@@ -79,7 +79,7 @@ export function AcoesMateria({
       {/* Excluir só aparece quando não há histórico para perder. Com trabalhos
           publicados, arquivar é o caminho — e a ação de servidor recusa mesmo
           que alguém force. */}
-      {!temTrabalhos && (
+      {!temAtividades && (
         <button
           type="button"
           onClick={() => setConfirmandoExclusao(true)}
