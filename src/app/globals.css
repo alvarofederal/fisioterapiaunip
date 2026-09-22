@@ -252,3 +252,62 @@ select.campo {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ─── Impressão ────────────────────────────────────────────────────
+   A folha de revisão vira PDF pelo "Salvar como PDF" do navegador. Aqui o
+   tema escuro sai de cena: papel é branco, e fundo escuro impresso gasta
+   tinta e sai ilegível. Só a folha permanece — menu, botões e navegação
+   ficam de fora com .no-print.                                        */
+@media print {
+  .no-print,
+  nav,
+  aside,
+  header.barra-publica,
+  footer {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  /* O layout do painel centra a folha na página impressa. */
+  main,
+  .folha-revisao {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    border: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  .folha-revisao,
+  .folha-revisao * {
+    color: #111111 !important;
+    background: transparent !important;
+  }
+
+  .folha-revisao h1,
+  .folha-revisao h2,
+  .folha-revisao h3 {
+    color: #000000 !important;
+  }
+
+  .folha-revisao header {
+    border-bottom: 1px solid #cccccc !important;
+  }
+
+  /* Um resumo não deve ser cortado no meio pela quebra de página. */
+  .folha-revisao section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 18mm 16mm;
+  }
+}

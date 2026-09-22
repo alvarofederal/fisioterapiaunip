@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { exigirAdmin } from "@/lib/autorizacao"
-import { materiaSchema } from "@/lib/validators/materia"
+import { materiaSchema, semestreSchema } from "@/lib/validators/materia"
+import { dataDeEncontro } from "@/lib/datas"
 
 export type Resultado =
   | { ok: true }
@@ -24,7 +25,8 @@ export async function criarMateria(dadosBrutos: unknown): Promise<Resultado> {
     return { ok: false, erro: primeiro.message, campo: String(primeiro.path[0] ?? "") }
   }
 
-  const { nome, professor, diaSemana, anotacoes, cor } = validacao.data
+  const { nome, professor, diaSemana, anotacoes, cor, modalidade, semestreId } =
+    validacao.data
 
   // Duas matérias com o mesmo nome confundem na hora de publicar trabalho.
   const jaExiste = await prisma.materia.findFirst({
@@ -43,6 +45,8 @@ export async function criarMateria(dadosBrutos: unknown): Promise<Resultado> {
         diaSemana,
         anotacoes: anotacoes || null,
         cor,
+        modalidade,
+        semestreId,
         criadoPorId: permissao.usuario.id,
       },
     })
@@ -72,7 +76,8 @@ export async function atualizarMateria(
   const existente = await prisma.materia.findUnique({ where: { id }, select: { id: true } })
   if (!existente) return { ok: false, erro: "Matéria não encontrada." }
 
-  const { nome, professor, diaSemana, anotacoes, cor } = validacao.data
+  const { nome, professor, diaSemana, anotacoes, cor, modalidade, semestreId } =
+    validacao.data
 
   const duplicada = await prisma.materia.findFirst({
     where: { nome, arquivada: false, NOT: { id } },
@@ -90,6 +95,8 @@ export async function atualizarMateria(
         diaSemana,
         anotacoes: anotacoes || null,
         cor,
+        modalidade,
+        semestreId,
       },
       where: { id },
     })
@@ -155,5 +162,76 @@ export async function excluirMateria(id: string): Promise<Resultado> {
 
   revalidatePath("/painel/materias")
   revalidatePath("/painel")
+  return { ok: true }
+}
+
+// ─── Semestre ────────────────────────────────────────────────────
+
+/**
+ * Cadastra o semestre letivo. Só o ADMIN, como toda estrutura.
+ *
+ * O par (ano, período) é único no banco: dois "2026/2" deixariam as matérias
+ * espalhadas em dois grupos iguais na listagem, sem jeito de saber qual é o
+ * certo.
+ */
+export async function criarSemestre(dadosBrutos: unknown): Promise<Resultado> {
+  const permissao = await exigirAdmin()
+  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+
+  const validacao = semestreSchema.safeParse(dadosBrutos)
+  if (!validacao.success) {
+    const primeiro = validacao.error.issues[0]
+    return { ok: false, erro: primeiro.message, campo: String(primeiro.path[0] ?? "") }
+  }
+
+  const { ano, periodo, inicioEm, fimEm } = validacao.data
+
+  const jaExiste = await prisma.semestre.findFirst({
+    where: { ano, periodo },
+    select: { id: true },
+  })
+  if (jaExiste) {
+    return { ok: false, erro: `O semestre ${ano}/${periodo} já está cadastrado.`, campo: "ano" }
+  }
+
+  try {
+    await prisma.semestre.create({
+      data: {
+        ano,
+        periodo,
+        inicioEm: inicioEm ? dataDeEncontro(inicioEm) : null,
+        fimEm: fimEm ? dataDeEncontro(fimEm) : null,
+      },
+    })
+  } catch (erro) {
+    console.error("Falha ao criar semestre:", erro)
+    return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
+  }
+
+  revalidatePath("/painel/materias")
+  return { ok: true }
+}
+
+/** Semestre com matéria dentro não sai: as matérias ficariam órfãs. */
+export async function excluirSemestre(id: string): Promise<Resultado> {
+  const permissao = await exigirAdmin()
+  if (!permissao.ok) return { ok: false, erro: permissao.erro }
+
+  const quantas = await prisma.materia.count({ where: { semestreId: id } })
+  if (quantas > 0) {
+    return {
+      ok: false,
+      erro: `Este semestre tem ${quantas} matéria(s). Mova ou exclua antes.`,
+    }
+  }
+
+  try {
+    await prisma.semestre.delete({ where: { id } })
+  } catch (erro) {
+    console.error("Falha ao excluir semestre:", erro)
+    return { ok: false, erro: "Não foi possível excluir. Tente de novo." }
+  }
+
+  revalidatePath("/painel/materias")
   return { ok: true }
 }

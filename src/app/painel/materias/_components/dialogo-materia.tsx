@@ -13,9 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { CORES_MATERIA, ORDEM_DIAS, ROTULO_DIA } from "@/lib/dominio"
+import { CORES_MATERIA, ORDEM_DIAS, ROTULO_DIA, rotuloSemestre } from "@/lib/dominio"
 import { criarMateria, atualizarMateria } from "../_actions"
-import type { CorTema, DiaSemana } from "@/generated/prisma"
+import type { CorTema, DiaSemana, Modalidade } from "@/generated/prisma"
 
 const LIMITE_ANOTACOES = 2000
 
@@ -26,34 +26,45 @@ export type MateriaEditavel = {
   diaSemana: DiaSemana
   anotacoes: string | null
   cor: CorTema
+  modalidade: Modalidade
+  semestreId: string
 }
 
-export function DialogoMateria({ materia }: { materia?: MateriaEditavel }) {
+/** Vêm da página já ordenados, do mais recente para o mais antigo. */
+export type SemestreOpcao = { id: string; ano: number; periodo: number }
+
+export function DialogoMateria({
+  materia,
+  semestres,
+}: {
+  materia?: MateriaEditavel
+  semestres: SemestreOpcao[]
+}) {
   const editando = Boolean(materia)
   const router = useRouter()
   const [aberto, setAberto] = useState(false)
   const [enviando, iniciarEnvio] = useTransition()
   const [erroCampo, setErroCampo] = useState<{ campo: string; mensagem: string } | null>(null)
 
-  const [dados, setDados] = useState({
+  // Matéria nova nasce no semestre mais recente, que é o que o ADMIN quer em
+  // 99% das vezes.
+  const valoresIniciais = () => ({
     nome: materia?.nome ?? "",
     professor: materia?.professor ?? "",
     diaSemana: materia?.diaSemana ?? ("A_DEFINIR" as DiaSemana),
     anotacoes: materia?.anotacoes ?? "",
     cor: materia?.cor ?? ("AZUL" as CorTema),
+    modalidade: materia?.modalidade ?? ("EAD" as Modalidade),
+    semestreId: materia?.semestreId ?? semestres[0]?.id ?? "",
   })
+
+  const [dados, setDados] = useState(valoresIniciais)
 
   function reabrir(estado: boolean) {
     setAberto(estado)
     if (estado) {
       setErroCampo(null)
-      setDados({
-        nome: materia?.nome ?? "",
-        professor: materia?.professor ?? "",
-        diaSemana: materia?.diaSemana ?? "A_DEFINIR",
-        anotacoes: materia?.anotacoes ?? "",
-        cor: materia?.cor ?? "AZUL",
-      })
+      setDados(valoresIniciais())
     }
   }
 
@@ -151,6 +162,54 @@ export function DialogoMateria({ materia }: { materia?: MateriaEditavel }) {
               placeholder="Ex.: Prof.ª Helena Prado"
               className="campo"
             />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="semestreId" className="rotulo">
+                Semestre <span className="text-ekko-red">*</span>
+              </label>
+              <select
+                id="semestreId"
+                required
+                value={dados.semestreId}
+                onChange={(e) => setDados({ ...dados, semestreId: e.target.value })}
+                aria-invalid={Boolean(erroDe("semestreId"))}
+                className="campo"
+              >
+                {semestres.length === 0 && (
+                  <option value="">Cadastre um semestre primeiro</option>
+                )}
+                {semestres.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {rotuloSemestre(s.ano, s.periodo)}
+                  </option>
+                ))}
+              </select>
+              {erroDe("semestreId") && (
+                <p className="mt-2 text-[12px] text-ekko-red">{erroDe("semestreId")}</p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="modalidade" className="rotulo">
+                Modalidade
+              </label>
+              <select
+                id="modalidade"
+                value={dados.modalidade}
+                onChange={(e) =>
+                  setDados({ ...dados, modalidade: e.target.value as Modalidade })
+                }
+                className="campo"
+              >
+                <option value="EAD">EaD</option>
+                <option value="PRESENCIAL">Presencial</option>
+              </select>
+              <p className="mt-1.5 text-[12px] text-greyple">
+                EaD tem unidades e teleaulas; presencial tem encontro com data.
+              </p>
+            </div>
           </div>
 
           <div>

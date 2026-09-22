@@ -1,10 +1,17 @@
 import Link from "next/link"
-import { BookOpen, User2, Archive } from "lucide-react"
+import { BookOpen, User2, Archive, Layers, ChevronRight } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
-import { ABREVIACAO_DIA, CORES_MATERIA, ORDEM_DIAS } from "@/lib/dominio"
-import { DialogoMateria } from "./_components/dialogo-materia"
+import {
+  ABREVIACAO_DIA,
+  CORES_MATERIA,
+  ORDEM_DIAS,
+  ROTULO_MODALIDADE,
+  rotuloSemestre,
+} from "@/lib/dominio"
+import { DialogoMateria, type SemestreOpcao } from "./_components/dialogo-materia"
+import { DialogoSemestre } from "./_components/dialogo-semestre"
 import { AcoesMateria } from "./_components/acoes-materia"
 
 export const metadata = { title: "Matérias" }
@@ -27,19 +34,40 @@ export default async function PaginaMaterias({
     : null
   const ehAdmin = eu?.role === "ADMIN"
 
-  const [materias, totalAtivas, totalArquivadas] = await Promise.all([
+  const [materias, semestres, totalAtivas, totalArquivadas] = await Promise.all([
     prisma.materia.findMany({
       where: { arquivada: vendoArquivadas },
-      include: { _count: { select: { atividades: true } } },
+      include: {
+        semestre: { select: { id: true, ano: true, periodo: true } },
+        _count: { select: { atividades: true, unidades: true } },
+      },
+    }),
+    // Do mais recente para o mais antigo: é o semestre em curso que interessa,
+    // e é ele que vira o padrão da matéria nova.
+    prisma.semestre.findMany({
+      orderBy: [{ ano: "desc" }, { periodo: "desc" }],
+      select: { id: true, ano: true, periodo: true },
     }),
     prisma.materia.count({ where: { arquivada: false } }),
     prisma.materia.count({ where: { arquivada: true } }),
   ])
 
-  const ordenadas = [...materias].sort((a, b) => {
-    const posicao = ORDEM_DIAS.indexOf(a.diaSemana) - ORDEM_DIAS.indexOf(b.diaSemana)
-    return posicao !== 0 ? posicao : a.nome.localeCompare(b.nome, "pt-BR")
-  })
+  const opcoesSemestre: SemestreOpcao[] = semestres
+
+  // Um grupo por semestre, na ordem dos semestres. A matéria fica sob o
+  // semestre dela; a listagem plana misturava períodos assim que a turma
+  // avançasse.
+  const grupos = semestres
+    .map((s) => ({
+      semestre: s,
+      materias: materias
+        .filter((m) => m.semestreId === s.id)
+        .sort((a, b) => {
+          const posicao = ORDEM_DIAS.indexOf(a.diaSemana) - ORDEM_DIAS.indexOf(b.diaSemana)
+          return posicao !== 0 ? posicao : a.nome.localeCompare(b.nome, "pt-BR")
+        }),
+    }))
+    .filter((g) => g.materias.length > 0)
 
   return (
     <div className="flex flex-col gap-7">
@@ -49,10 +77,15 @@ export default async function PaginaMaterias({
           <p className="mt-2 text-[15px] text-fog">
             {totalAtivas === 0
               ? "Nenhuma matéria cadastrada"
-              : `${totalAtivas} ${totalAtivas === 1 ? "matéria" : "matérias"} no semestre`}
+              : `${totalAtivas} ${totalAtivas === 1 ? "matéria" : "matérias"} no curso`}
           </p>
         </div>
-        {ehAdmin && <DialogoMateria />}
+        {ehAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <DialogoSemestre />
+            <DialogoMateria semestres={opcoesSemestre} />
+          </div>
+        )}
       </header>
 
       {totalArquivadas > 0 && (
@@ -72,7 +105,7 @@ export default async function PaginaMaterias({
         </nav>
       )}
 
-      {ordenadas.length === 0 ? (
+      {grupos.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-ember-orange/15 text-ember-orange">
             <BookOpen size={26} aria-hidden />
@@ -84,77 +117,120 @@ export default async function PaginaMaterias({
             {vendoArquivadas
               ? "Matérias arquivadas ficam guardadas aqui."
               : ehAdmin
-                ? "Cadastre a primeira matéria do semestre. Depois é só publicar as atividades dela."
+                ? semestres.length === 0
+                  ? "Cadastre primeiro o semestre. Depois as matérias entram dentro dele."
+                  : "Cadastre a primeira matéria do semestre. Depois é só publicar as atividades dela."
                 : "Assim que o administrador cadastrar as matérias, elas aparecem aqui."}
           </p>
-          {ehAdmin && !vendoArquivadas && <DialogoMateria />}
+          {ehAdmin &&
+            !vendoArquivadas &&
+            (semestres.length === 0 ? (
+              <DialogoSemestre />
+            ) : (
+              <DialogoMateria semestres={opcoesSemestre} />
+            ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {ordenadas.map((materia) => {
-            const tema = CORES_MATERIA[materia.cor]
-            return (
-              <article
-                key={materia.id}
-                className={cn(
-                  "acento-lateral relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 pl-6 transition-colors hover:border-white/20",
-                  materia.arquivada && "opacity-65"
-                )}
-                style={{ ["--acento" as string]: tema.base }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <h2 className="titulo-display text-[18px] leading-tight">{materia.nome}</h2>
-                  <span
-                    className="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold"
-                    style={{
-                      background: tema.suave,
-                      color: tema.base,
-                      borderColor: tema.borda,
-                    }}
-                  >
-                    {ABREVIACAO_DIA[materia.diaSemana]}
-                  </span>
-                </div>
+        <div className="flex flex-col gap-9">
+          {grupos.map(({ semestre, materias: doSemestre }) => (
+            <section key={semestre.id} className="flex flex-col gap-4">
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
+                {rotuloSemestre(semestre.ano, semestre.periodo)} · {doSemestre.length}
+              </h2>
 
-                <p className="flex items-center gap-2 text-[14px] text-fog">
-                  <User2 size={14} className="text-greyple" aria-hidden />
-                  {materia.professor || (
-                    <span className="italic text-greyple">Professor não informado</span>
-                  )}
-                </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {doSemestre.map((materia) => {
+                  const tema = CORES_MATERIA[materia.cor]
+                  const ehEad = materia.modalidade === "EAD"
 
-                {materia.anotacoes && (
-                  <p className="line-clamp-4 whitespace-pre-line text-[14px] leading-relaxed text-fog">
-                    {materia.anotacoes}
-                  </p>
-                )}
+                  return (
+                    <article
+                      key={materia.id}
+                      className={cn(
+                        "acento-lateral relative flex flex-col gap-3 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 pl-6 transition-colors hover:border-white/20",
+                        materia.arquivada && "opacity-65"
+                      )}
+                      style={{ ["--acento" as string]: tema.base }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h3 className="titulo-display text-[18px] leading-tight">
+                          <Link
+                            href={`/painel/materias/${materia.id}`}
+                            className="transition-colors hover:text-hover-blurple"
+                          >
+                            {materia.nome}
+                          </Link>
+                        </h3>
+                        <span
+                          className="inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold"
+                          style={{
+                            background: tema.suave,
+                            color: tema.base,
+                            borderColor: tema.borda,
+                          }}
+                        >
+                          {ehEad ? ROTULO_MODALIDADE.EAD : ABREVIACAO_DIA[materia.diaSemana]}
+                        </span>
+                      </div>
 
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
-                  <p className="text-[12px] text-greyple">
-                    {materia._count.atividades === 0
-                      ? "Nenhuma atividade"
-                      : `${materia._count.atividades} ${
-                          materia._count.atividades === 1 ? "atividade" : "atividades"
-                        }`}
-                  </p>
-                  {ehAdmin && (
-                    <AcoesMateria
-                      materia={{
-                        id: materia.id,
-                        nome: materia.nome,
-                        professor: materia.professor,
-                        diaSemana: materia.diaSemana,
-                        anotacoes: materia.anotacoes,
-                        cor: materia.cor,
-                      }}
-                      arquivada={materia.arquivada}
-                      temAtividades={materia._count.atividades > 0}
-                    />
-                  )}
-                </div>
-              </article>
-            )
-          })}
+                      <p className="flex items-center gap-2 text-[14px] text-fog">
+                        <User2 size={14} className="text-greyple" aria-hidden />
+                        {materia.professor || (
+                          <span className="italic text-greyple">Professor não informado</span>
+                        )}
+                      </p>
+
+                      {materia.anotacoes && (
+                        <p className="line-clamp-4 whitespace-pre-line text-[14px] leading-relaxed text-fog">
+                          {materia.anotacoes}
+                        </p>
+                      )}
+
+                      <Link
+                        href={`/painel/materias/${materia.id}`}
+                        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-hover-blurple transition-colors hover:text-white"
+                      >
+                        <Layers size={14} aria-hidden />
+                        {materia._count.unidades === 0
+                          ? "Abrir matéria"
+                          : `${materia._count.unidades} ${
+                              materia._count.unidades === 1 ? "unidade" : "unidades"
+                            }`}
+                        <ChevronRight size={14} aria-hidden />
+                      </Link>
+
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-white/[0.08] pt-3">
+                        <p className="text-[12px] text-greyple">
+                          {materia._count.atividades === 0
+                            ? "Nenhuma atividade"
+                            : `${materia._count.atividades} ${
+                                materia._count.atividades === 1 ? "atividade" : "atividades"
+                              }`}
+                        </p>
+                        {ehAdmin && (
+                          <AcoesMateria
+                            semestres={opcoesSemestre}
+                            materia={{
+                              id: materia.id,
+                              nome: materia.nome,
+                              professor: materia.professor,
+                              diaSemana: materia.diaSemana,
+                              anotacoes: materia.anotacoes,
+                              cor: materia.cor,
+                              modalidade: materia.modalidade,
+                              semestreId: materia.semestreId,
+                            }}
+                            arquivada={materia.arquivada}
+                            temAtividades={materia._count.atividades > 0}
+                          />
+                        )}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
     </div>

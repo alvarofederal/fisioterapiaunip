@@ -24,7 +24,7 @@ import {
 import { cn } from "@/lib/utils"
 
 export type AtividadeDoMural = Atividade & {
-  materia: Pick<Materia, "id" | "nome" | "cor"> | null
+  materia: Pick<Materia, "id" | "nome" | "cor" | "modalidade"> | null
   anexos: Anexo[]
 }
 
@@ -86,9 +86,12 @@ function Detalhe({
 export function CardAtividade({
   atividade,
   acoes,
+  marcos,
 }: {
   atividade: AtividadeDoMural
   acoes?: React.ReactNode
+  /** Carimbo e correcao do aluno; so aparece em trabalho presencial. */
+  marcos?: React.ReactNode
 }) {
   const tipo = TIPOS_ATIVIDADE[atividade.tipo]
   const temaMateria = atividade.materia ? CORES_MATERIA[atividade.materia.cor] : null
@@ -271,6 +274,8 @@ export function CardAtividade({
 
       {/* Ações do ADMIN ficam no corpo, nunca no <summary>: botão dentro de
           summary rouba o clique que deveria abrir o accordion. */}
+      {marcos}
+
       {acoes && (
         <div className="flex flex-wrap items-center gap-1 border-t border-white/[0.08] pt-3">
           {acoes}

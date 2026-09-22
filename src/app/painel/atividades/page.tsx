@@ -5,7 +5,8 @@ import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { ORDEM_TIPOS_ATIVIDADE, TIPOS_ATIVIDADE } from "@/lib/dominio"
-import { separarAtividades } from "@/lib/atividades"
+import { separarAtividades, usaCarimbo, TRABALHO_SEM_MARCO } from "@/lib/atividades"
+import { MarcosDoTrabalho } from "../_components/marcos-trabalho"
 import type { TipoAtividade } from "@/generated/prisma"
 import { CardAtividade, type AtividadeDoMural } from "../_components/card-atividade"
 import { DialogoAtividade } from "./_components/dialogo-atividade"
@@ -40,8 +41,10 @@ export default async function PaginaAtividades({
         ...(tipoFiltro ? { tipo: tipoFiltro } : {}),
       },
       include: {
-        materia: { select: { id: true, nome: true, cor: true } },
+        materia: { select: { id: true, nome: true, cor: true, modalidade: true } },
         anexos: true,
+        // Só o progresso de quem está lendo: a folha é de cada um.
+        progressos: { where: { usuarioId: sessao.user.id } },
       },
     }),
     prisma.atividade.groupBy({
@@ -58,14 +61,22 @@ export default async function PaginaAtividades({
 
   // Regra única em src/lib/atividades.ts, com teste: o próximo a vencer abre a
   // lista e o que já passou desce.
-  const { aFazer, jaPassaram } = separarAtividades<AtividadeDoMural>(atividades)
+  const { aFazer, jaPassaram } = separarAtividades(atividades)
   const total = aFazer.length + jaPassaram.length
 
   // Os dois blocos montam o card do mesmo jeito, com as mesmas ações de ADMIN.
-  const renderizar = (atividade: AtividadeDoMural) => (
+  const renderizar = (atividade: (typeof atividades)[number]) => (
     <CardAtividade
       key={atividade.id}
       atividade={atividade}
+      marcos={
+        usaCarimbo(atividade) ? (
+          <MarcosDoTrabalho
+            atividadeId={atividade.id}
+            progresso={atividade.progressos[0] ?? TRABALHO_SEM_MARCO}
+          />
+        ) : undefined
+      }
       acoes={
         ehAdmin ? (
           <AcoesAtividade

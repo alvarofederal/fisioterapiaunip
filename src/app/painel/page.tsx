@@ -3,7 +3,8 @@ import { ListChecks, CalendarDays, CircleAlert } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { dataQueImporta, diasAte, textoDeProximidade } from "@/lib/dominio"
-import { separarAtividades } from "@/lib/atividades"
+import { separarAtividades, usaCarimbo, TRABALHO_SEM_MARCO } from "@/lib/atividades"
+import { MarcosDoTrabalho } from "./_components/marcos-trabalho"
 import { CardAtividade, type AtividadeDoMural } from "./_components/card-atividade"
 
 export const metadata = { title: "Início" }
@@ -24,8 +25,11 @@ export default async function MuralDaTurma() {
     prisma.atividade.findMany({
       where: { arquivada: false },
       include: {
-        materia: { select: { id: true, nome: true, cor: true } },
+        materia: { select: { id: true, nome: true, cor: true, modalidade: true } },
         anexos: true,
+        progressos: sessao?.user?.id
+          ? { where: { usuarioId: sessao.user.id } }
+          : { where: { usuarioId: "" } },
       },
       take: 60,
     }),
@@ -39,7 +43,22 @@ export default async function MuralDaTurma() {
 
   // Regra única em src/lib/atividades.ts, com teste: o próximo a vencer abre
   // a lista e o que já passou desce.
-  const { aFazer, jaPassaram } = separarAtividades<AtividadeDoMural>(atividades)
+  const { aFazer, jaPassaram } = separarAtividades(atividades)
+
+  const renderizar = (atividade: (typeof atividades)[number]) => (
+    <CardAtividade
+      key={atividade.id}
+      atividade={atividade}
+      marcos={
+        usaCarimbo(atividade) ? (
+          <MarcosDoTrabalho
+            atividadeId={atividade.id}
+            progresso={atividade.progressos[0] ?? TRABALHO_SEM_MARCO}
+          />
+        ) : undefined
+      }
+    />
+  )
   const total = aFazer.length + jaPassaram.length
 
   const urgentes = aFazer.filter((a) => {
@@ -145,9 +164,7 @@ export default async function MuralDaTurma() {
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
                 A fazer · {aFazer.length}
               </h2>
-              {aFazer.map((atividade) => (
-                <CardAtividade key={atividade.id} atividade={atividade} />
-              ))}
+              {aFazer.map(renderizar)}
             </section>
           )}
 
@@ -156,9 +173,7 @@ export default async function MuralDaTurma() {
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
                 Já passou · {jaPassaram.length}
               </h2>
-              {jaPassaram.map((atividade) => (
-                <CardAtividade key={atividade.id} atividade={atividade} />
-              ))}
+              {jaPassaram.map(renderizar)}
             </section>
           )}
         </>

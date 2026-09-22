@@ -15,14 +15,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { arquivarMateria, excluirMateria } from "../_actions"
-import { DialogoMateria, type MateriaEditavel } from "./dialogo-materia"
+import { DialogoMateria, type MateriaEditavel, type SemestreOpcao } from "./dialogo-materia"
 
 export function AcoesMateria({
   materia,
+  semestres,
   arquivada,
   temAtividades,
 }: {
   materia: MateriaEditavel
+  semestres: SemestreOpcao[]
   arquivada: boolean
   temAtividades: boolean
 }) {
@@ -58,7 +60,7 @@ export function AcoesMateria({
 
   return (
     <div className="flex items-center gap-1">
-      <DialogoMateria materia={materia} />
+      <DialogoMateria materia={materia} semestres={semestres} />
 
       <button
         type="button"
