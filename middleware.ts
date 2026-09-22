@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server"
  * presença do cookie. A checagem real de papel e de conta ativa acontece
  * no servidor, dentro de cada página do painel.
  */
-const ROTAS_PUBLICAS = ["/login", "/register"]
+const ROTAS_PUBLICAS = ["/login", "/register", "/noticias"]
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

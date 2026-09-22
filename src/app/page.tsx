@@ -1,8 +1,11 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
-import { BookOpen, CalendarClock, FileDown, ShieldCheck } from "lucide-react"
+import { BookOpen, CalendarClock, FileDown, ShieldCheck, Newspaper, ArrowRight } from "lucide-react"
 import { MarcaFisio } from "@/components/marca-fisio"
+import { BarraPublica } from "@/components/barra-publica"
+import { CardNoticia } from "@/components/card-noticia"
+import { buscarNoticias } from "@/lib/noticias"
 
 const RECURSOS = [
   {
@@ -29,6 +32,9 @@ export default async function PaginaInicial() {
   const sessao = await auth()
   if (sessao?.user) redirect("/painel")
 
+  // Vitrine só com o que é público — ver o `select` em src/lib/noticias.ts.
+  const { proximas } = await buscarNoticias(12)
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0e0f2d]">
       <div aria-hidden className="ceu-estrelado pointer-events-none absolute inset-0" />
@@ -41,16 +47,7 @@ export default async function PaginaInicial() {
         }}
       />
 
-      {/* Barra de topo */}
-      <header className="relative z-10 mx-auto flex h-20 max-w-[1200px] items-center justify-between px-5">
-        <MarcaFisio />
-        <Link
-          href="/login"
-          className="rounded-2xl bg-white px-4 py-2.5 text-[15px] font-medium text-[#23272a] transition-transform hover:scale-[1.03]"
-        >
-          Entrar
-        </Link>
-      </header>
+      <BarraPublica />
 
       {/* Hero */}
       <section className="relative z-10 mx-auto max-w-[1200px] px-5 pt-14 pb-24 text-center md:pt-24">
@@ -85,6 +82,31 @@ export default async function PaginaInicial() {
           </Link>
         </div>
       </section>
+
+      {/* O que está chegando — a razão de alguém abrir isto sem ter conta */}
+      {proximas.length > 0 && (
+        <section className="relative z-10 mx-auto max-w-[840px] px-5 pb-24">
+          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="titulo-display flex items-center gap-2.5 text-[24px]">
+              <Newspaper size={22} className="text-hover-blurple" aria-hidden />
+              O que vem aí
+            </h2>
+            <Link
+              href="/noticias"
+              className="inline-flex items-center gap-1.5 text-[14px] font-medium text-hover-blurple hover:underline"
+            >
+              Ver todas
+              <ArrowRight size={15} aria-hidden />
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-4 text-left">
+            {proximas.slice(0, 4).map((noticia) => (
+              <CardNoticia key={noticia.id} noticia={noticia} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Painéis de recurso — cada um com a própria iluminação */}
       <section className="relative z-10 mx-auto max-w-[1200px] px-5 pb-28">
