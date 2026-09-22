@@ -150,7 +150,10 @@ export async function criarAula(dadosBrutos: unknown): Promise<Resultado> {
 
 /** Excluir o encontro leva junto as anotações de estudo de todo mundo (cascade). */
 export async function excluirAula(aulaId: string): Promise<Resultado> {
-  const permissao = await exigirAdmin()
+  const sessao = await auth()
+  if (!sessao?.user?.id) return { ok: false, erro: "Você precisa entrar no portal." }
+
+  const permissao = await permissaoNaAula(aulaId, sessao.user.id)
   if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
   try {
@@ -176,7 +179,10 @@ export async function atualizarAula(
   aulaId: string,
   dadosBrutos: unknown
 ): Promise<Resultado> {
-  const permissao = await exigirAdmin()
+  const sessao = await auth()
+  if (!sessao?.user?.id) return { ok: false, erro: "Você precisa entrar no portal." }
+
+  const permissao = await permissaoNaAula(aulaId, sessao.user.id)
   if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
   const validacao = aulaSchema.safeParse(dadosBrutos)
@@ -215,6 +221,100 @@ export async function atualizarAula(
     })
   } catch (erro) {
     console.error("Falha ao atualizar encontro:", erro)
+    return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
+  }
+
+  revalidatePath("/painel/cronograma")
+  revalidatePath("/painel")
+  return { ok: true }
+}
+
+// ─── Cronograma EaD, de cada aluno ───────────────────────────────
+
+/**
+ * Quem pode mexer neste encontro.
+ *
+ * Presencial (sem dono) é da turma: só o ADMIN altera.
+ * EaD tem dono: só o dono altera — nem o ADMIN, porque é a agenda de estudo
+ * particular daquela pessoa.
+ */
+async function permissaoNaAula(aulaId: string, usuarioId: string) {
+  const aula = await prisma.aula.findUnique({
+    where: { id: aulaId },
+    select: { id: true, donoId: true, modalidade: true },
+  })
+  if (!aula) return { ok: false as const, erro: "Encontro não encontrado." }
+
+  if (aula.donoId === null) {
+    const admin = await exigirAdmin()
+    if (!admin.ok) {
+      return { ok: false as const, erro: "Só o administrador altera o cronograma da turma." }
+    }
+    return { ok: true as const, aula }
+  }
+
+  if (aula.donoId !== usuarioId) {
+    return { ok: false as const, erro: "Este encontro de EaD é de outro aluno." }
+  }
+  return { ok: true as const, aula }
+}
+
+/**
+ * Registra uma sessão de estudo EaD. Não é ação de ADMIN: cada aluno monta a
+ * própria agenda das matérias do AVA, e só ele enxerga o que marcou.
+ */
+export async function criarAulaEaD(dadosBrutos: unknown): Promise<Resultado> {
+  const sessao = await auth()
+  if (!sessao?.user?.id) return { ok: false, erro: "Você precisa entrar no portal." }
+
+  const eu = await prisma.user.findUnique({
+    where: { id: sessao.user.id },
+    select: { ativo: true },
+  })
+  if (!eu?.ativo) return { ok: false, erro: "Sua conta não está ativa." }
+
+  const validacao = aulaSchema.safeParse(dadosBrutos)
+  if (!validacao.success) {
+    return { ok: false, erro: validacao.error.issues[0].message }
+  }
+
+  const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
+
+  // Só faz sentido marcar estudo próprio em matéria EaD: o presencial já tem
+  // data definida pela faculdade.
+  const materia = await prisma.materia.findUnique({
+    where: { id: materiaId },
+    select: { modalidade: true },
+  })
+  if (!materia) return { ok: false, erro: "Matéria não encontrada." }
+  if (materia.modalidade !== "EAD") {
+    return { ok: false, erro: "Esta matéria é presencial — o cronograma dela é da turma." }
+  }
+
+  const dataEncontro = new Date(`${data}T12:00:00.000Z`)
+
+  const jaExiste = await prisma.aula.findFirst({
+    where: { materiaId, data: dataEncontro, donoId: sessao.user.id },
+    select: { id: true },
+  })
+  if (jaExiste) {
+    return { ok: false, erro: "Você já marcou estudo dessa matéria nessa data." }
+  }
+
+  try {
+    await prisma.aula.create({
+      data: {
+        materiaId,
+        data: dataEncontro,
+        horaInicio: horaInicio || null,
+        horaFim: horaFim || null,
+        conteudo: conteudo || null,
+        modalidade: "EAD",
+        donoId: sessao.user.id,
+      },
+    })
+  } catch (erro) {
+    console.error("Falha ao criar estudo EaD:", erro)
     return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
   }
 

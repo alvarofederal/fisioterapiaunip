@@ -6,6 +6,9 @@ export default defineConfig({
     globals:     true,
     environment: "node",
     setupFiles:  ["./tests/setup.ts"],
+    // O build do Next copia tests/ para .next/standalone/. Sem excluir, o vitest
+    // roda a copia velha de la e reporta falha em teste que ja foi corrigido.
+    exclude:     ["**/node_modules/**", "**/.next/**", "**/dist/**"],
     testTimeout: 30_000,       // 30s para consultas DB reais
     hookTimeout: 30_000,
     // Testes de integração compartilham banco real: sem paralelismo entre arquivos

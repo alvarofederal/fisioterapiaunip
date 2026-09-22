@@ -1,36 +1,40 @@
 // src/lib/cronograma.ts
 import { diasAte } from "./dominio"
-import type { StatusEstudo } from "@/generated/prisma"
+import type { Modalidade, StatusEstudo } from "@/generated/prisma"
 
 export type ItemCronograma = {
   data: Date
+  modalidade: Modalidade
   meuEstudo: { status: StatusEstudo } | null
 }
 
 export type Agrupamento<T extends ItemCronograma> = {
-  /** O único item que a tela destaca no topo. */
+  /** O próximo encontro, destacado no topo. */
   foco: T | null
-  /** Verdadeiro quando o foco é algo atrasado, e não o próximo encontro. */
-  focoEhAtraso: boolean
-  /** Já aconteceu e não foi revisado — sem o foco, para não repetir. */
-  atrasadas: T[]
-  /** Ainda vai acontecer e não foi revisado — sem o foco. */
-  futuras: T[]
-  /** Revisados, do mais recente para o mais antigo. */
-  concluidas: T[]
+  /** Ainda vai acontecer — presencial da turma. */
+  presenciais: T[]
+  /** Ainda vai acontecer — EaD, registrado pelo próprio aluno. */
+  ead: T[]
+  /** Já passou e foi revisado. */
+  feitas: T[]
+  /** Já passou sem estudo — continua acessível para refazer. */
+  naoFeitas: T[]
   revisadas: number
   percentual: number
 }
 
 /**
- * Separa o cronograma em "o que cobra agora", "o que vem" e "o que já foi".
+ * Separa o cronograma pela regra combinada: data passada sai da lista
+ * principal sozinha, sem depender de clique.
  *
- * Mês não é uma pergunta que alguém faz olhando o cronograma; "o que eu estudo
- * agora" é. O foco sai dos grupos para não aparecer duas vezes na tela.
+ * O que já aconteceu vira histórico — seja porque foi estudado, seja porque
+ * não foi. Deixar o passado misturado com o que vem transforma a tela numa
+ * lista de cobrança que só cresce. As não estudadas continuam lá, separadas e
+ * com cor própria, para quem quiser voltar e fazer.
  *
- * `total` é separado da lista porque o progresso é sempre do semestre inteiro,
- * mesmo quando a tela está filtrada por matéria: filtrar é para achar, não
- * para maquiar quanto falta.
+ * `todosDoSemestre` fica separado da lista porque o progresso é sempre do
+ * semestre inteiro, mesmo com a tela filtrada: filtrar é para achar, não para
+ * parecer que falta menos.
  */
 export function agruparCronograma<T extends ItemCronograma>(
   itens: T[],
@@ -38,17 +42,20 @@ export function agruparCronograma<T extends ItemCronograma>(
   referencia = new Date()
 ): Agrupamento<T> {
   const status = (i: ItemCronograma) => i.meuEstudo?.status ?? "A_ESTUDAR"
+  const jaPassou = (i: ItemCronograma) => diasAte(i.data, referencia) < 0
 
-  const atrasadas = itens
-    .filter((i) => diasAte(i.data, referencia) < 0 && status(i) !== "REVISADO")
-    .reverse() // a mais recente primeiro: ainda está fresca na cabeça
-  const futuras = itens.filter(
-    (i) => diasAte(i.data, referencia) >= 0 && status(i) !== "REVISADO"
-  )
-  const concluidas = itens.filter((i) => status(i) === "REVISADO").reverse()
+  const futuros = itens.filter((i) => !jaPassou(i))
+  const passados = itens.filter(jaPassou)
 
-  const focoEhAtraso = atrasadas.length > 0
-  const foco = focoEhAtraso ? atrasadas[0] : (futuras[0] ?? null)
+  // Presencial é da turma e EaD é de cada um — não se misturam na tela.
+  const presenciais = futuros.filter((i) => i.modalidade === "PRESENCIAL")
+  const ead = futuros.filter((i) => i.modalidade === "EAD")
+
+  // Histórico do mais recente para o mais antigo: é o que ainda interessa.
+  const feitas = passados.filter((i) => status(i) === "REVISADO").reverse()
+  const naoFeitas = passados.filter((i) => status(i) !== "REVISADO").reverse()
+
+  const foco = futuros[0] ?? null
 
   const revisadas = todosDoSemestre.filter((i) => status(i) === "REVISADO").length
   const percentual =
@@ -58,10 +65,11 @@ export function agruparCronograma<T extends ItemCronograma>(
 
   return {
     foco,
-    focoEhAtraso,
-    atrasadas: focoEhAtraso ? atrasadas.slice(1) : atrasadas,
-    futuras: focoEhAtraso ? futuras : futuras.slice(1),
-    concluidas,
+    // O foco já aparece em destaque; repetir na lista seria ruído.
+    presenciais: presenciais.filter((i) => i !== foco),
+    ead: ead.filter((i) => i !== foco),
+    feitas,
+    naoFeitas,
     revisadas,
     percentual,
   }

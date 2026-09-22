@@ -21,6 +21,9 @@ import { DialogoAula } from "./dialogo-aula"
 export type AulaDoCronograma = {
   id: string
   data: Date
+  modalidade: "PRESENCIAL" | "EAD"
+  /** EaD registrado pelo próprio aluno — só ele vê e só ele altera. */
+  ehMeu: boolean
   horaInicio: string | null
   horaFim: string | null
   conteudo: string | null
@@ -40,11 +43,14 @@ export function CardAula({
   ehAdmin,
   destaque,
   materias = [],
+  naoFeita,
 }: {
   aula: AulaDoCronograma
   ehAdmin: boolean
   destaque?: boolean
   materias?: { id: string; nome: string }[]
+  /** Já passou sem estudo: fica alaranjado, não esmaecido. */
+  naoFeita?: boolean
 }) {
   const router = useRouter()
   const [salvando, iniciar] = useTransition()
@@ -84,9 +90,15 @@ export function CardAula({
   return (
     <article
       className={cn(
-        "acento-lateral relative overflow-hidden rounded-2xl border bg-white/[0.04] transition-colors",
-        destaque ? "border-white/25" : "border-white/10 hover:border-white/20",
-        status === "REVISADO" && !destaque && "opacity-60"
+        "acento-lateral relative overflow-hidden rounded-2xl border transition-colors",
+        // A aula que passou sem estudo não fica esmaecida como as revisadas:
+        // ela ainda pede ação, e apagar a cor seria escondê-la.
+        naoFeita
+          ? "border-ember-orange/35 bg-ember-orange/[0.06] hover:border-ember-orange/55"
+          : destaque
+            ? "border-white/25 bg-white/[0.04]"
+            : "border-white/10 bg-white/[0.04] hover:border-white/20",
+        status === "REVISADO" && !destaque && !naoFeita && "opacity-60"
       )}
       style={{ ["--acento" as string]: tema.base }}
     >
@@ -273,7 +285,7 @@ export function CardAula({
               </button>
             )}
 
-            {ehAdmin && !editandoConteudo && (
+            {(ehAdmin || aula.ehMeu) && !editandoConteudo && (
               <>
                 <button
                   type="button"
