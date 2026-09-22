@@ -11,6 +11,8 @@ import {
   estudoTeleaulaSchema,
   progressoAtividadeSchema,
 } from "@/lib/validators/unidade"
+import { sanitizarHtml } from "@/lib/sanitizar"
+import { htmlTemConteudo } from "@/lib/unidades"
 
 export type Resultado = { ok: true } | { ok: false; erro: string }
 
@@ -244,13 +246,18 @@ export async function salvarEstudoTeleaula(
   })
   if (!teleaula) return { ok: false, erro: "Teleaula não encontrada." }
 
-  const { status, anotacoes } = validacao.data
+  const { status } = validacao.data
+
+  // Limpa na ENTRADA: o que está gravado já é seguro para qualquer tela que
+  // leia esse campo depois, inclusive uma que ainda não existe.
+  const limpo = sanitizarHtml(validacao.data.anotacoes)
+  const anotacoes = htmlTemConteudo(limpo) ? limpo : null
 
   try {
     await prisma.estudoTeleaula.upsert({
       where: { teleaulaId_usuarioId: { teleaulaId, usuarioId: quem.usuarioId } },
-      update: { status, anotacoes: anotacoes || null },
-      create: { teleaulaId, usuarioId: quem.usuarioId, status, anotacoes: anotacoes || null },
+      update: { status, anotacoes },
+      create: { teleaulaId, usuarioId: quem.usuarioId, status, anotacoes },
     })
   } catch (erro) {
     console.error("Falha ao salvar resumo da teleaula:", erro)

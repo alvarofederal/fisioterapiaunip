@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation"
 import { ChevronDown, Loader2, Trash2, Plus, NotebookPen } from "lucide-react"
 import { toast } from "sonner"
 import { STATUS_ESTUDO, ORDEM_STATUS } from "@/lib/dominio"
+import dynamic from "next/dynamic"
 import {
   ITENS_DA_UNIDADE,
+  htmlTemConteudo,
   progressoDaUnidade,
   rotuloUnidade,
   type UnidadeComProgresso,
@@ -24,7 +26,24 @@ import {
   criarTeleaula,
 } from "../_actions"
 
-const LIMITE_RESUMO = 10000
+import { LIMITE_RESUMO } from "@/lib/validators/unidade"
+
+/**
+ * O CKEditor toca em `window` ao montar, então entra sem SSR. Também é o maior
+ * pedaço de JavaScript da tela: carregado sob demanda, ele não pesa em quem só
+ * abriu a matéria para marcar um checkbox.
+ */
+const EditorResumo = dynamic(
+  () => import("./editor-resumo").then((m) => m.EditorResumo),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-white/10 bg-white/[0.02] text-[13px] text-greyple">
+        Carregando o editor…
+      </div>
+    ),
+  }
+)
 
 export function PainelUnidade({
   unidade,
@@ -228,6 +247,7 @@ function BlocoTeleaula({
   const [salvando, iniciar] = useTransition()
   const [editando, setEditando] = useState(false)
   const [texto, setTexto] = useState(teleaula.anotacoes ?? "")
+  const [tamanho, setTamanho] = useState(0)
   const [status, setStatus] = useState<StatusEstudo>(teleaula.status)
 
   const tema = STATUS_ESTUDO[status]
@@ -298,22 +318,18 @@ function BlocoTeleaula({
 
       {editando ? (
         <div className="mt-3">
-          <label htmlFor={`resumo-${teleaula.id}`} className="sr-only">
-            Resumo da {rotulo}
-          </label>
-          <textarea
-            id={`resumo-${teleaula.id}`}
-            autoFocus
-            rows={6}
-            maxLength={LIMITE_RESUMO}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            placeholder="O que você entendeu desta aula. Isto vai para o PDF de revisão."
-            className="campo resize-y"
-          />
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] text-greyple tabular-nums">
-              {texto.length} / {LIMITE_RESUMO}
+          <p className="mb-2 text-[13px] font-medium text-white">Resumo da {rotulo}</p>
+
+          <EditorResumo valor={texto} aoMudar={setTexto} aoContar={setTamanho} />
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span
+              className={cn(
+                "text-[12px] tabular-nums",
+                tamanho > LIMITE_RESUMO ? "text-ekko-red" : "text-greyple"
+              )}
+            >
+              {tamanho.toLocaleString("pt-BR")} / {LIMITE_RESUMO.toLocaleString("pt-BR")}
             </span>
             <div className="flex gap-2">
               <button
@@ -330,7 +346,7 @@ function BlocoTeleaula({
               <button
                 type="button"
                 onClick={() => salvar(status, texto)}
-                disabled={salvando}
+                disabled={salvando || tamanho > LIMITE_RESUMO}
                 className="btn-primario"
               >
                 {salvando && <Loader2 size={16} className="animate-spin" aria-hidden />}
@@ -341,13 +357,14 @@ function BlocoTeleaula({
         </div>
       ) : (
         <>
-          {teleaula.anotacoes?.trim() && (
-            <p
-              className="mt-3 whitespace-pre-line rounded-lg border-l-2 bg-black/20 px-3 py-2 text-[13px] leading-relaxed text-fog"
+          {htmlTemConteudo(teleaula.anotacoes) && (
+            // O HTML já foi limpo por allowlist na gravação (src/lib/sanitizar.ts).
+            // Escapar aqui devolveria "&lt;strong&gt;" na tela.
+            <div
+              className="conteudo-rico mt-3 rounded-lg border-l-2 bg-black/20 px-4 py-3"
               style={{ borderLeftColor: corDaMateria }}
-            >
-              {teleaula.anotacoes}
-            </p>
+              dangerouslySetInnerHTML={{ __html: teleaula.anotacoes ?? "" }}
+            />
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -357,7 +374,7 @@ function BlocoTeleaula({
               className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-fog transition-colors hover:bg-white/[0.08] hover:text-white"
             >
               <NotebookPen size={14} aria-hidden />
-              {teleaula.anotacoes?.trim() ? "Editar resumo" : "Escrever resumo"}
+              {htmlTemConteudo(teleaula.anotacoes) ? "Editar resumo" : "Escrever resumo"}
             </button>
 
             {ehAdmin && (

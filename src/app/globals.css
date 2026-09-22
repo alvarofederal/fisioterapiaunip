@@ -311,3 +311,206 @@ select.campo {
     margin: 18mm 16mm;
   }
 }
+
+/* ─── Editor de resumo (CKEditor) ──────────────────────────────────
+   O CKEditor traz tema claro. Aqui ele é vestido com as variáveis do
+   DESIGN.md para não virar uma janela branca no meio do tema escuro.
+   Usa as próprias variáveis do editor, não !important em regra interna,
+   porque é o que a biblioteca declara como ponto de extensão.           */
+.editor-resumo {
+  --ck-color-base-background: #1a1b3a;
+  --ck-color-base-foreground: #23272a;
+  --ck-color-base-border: rgba(255, 255, 255, 0.12);
+  --ck-color-base-text: #ffffff;
+  --ck-color-text: #ffffff;
+  --ck-color-toolbar-background: #23272a;
+  --ck-color-toolbar-border: rgba(255, 255, 255, 0.12);
+  --ck-color-button-default-background: transparent;
+  --ck-color-button-default-hover-background: rgba(255, 255, 255, 0.08);
+  --ck-color-button-on-background: rgba(88, 101, 242, 0.22);
+  --ck-color-button-on-color: #8891f2;
+  --ck-color-button-on-hover-background: rgba(88, 101, 242, 0.3);
+  --ck-color-focus-border: #5865f2;
+  --ck-color-dropdown-panel-background: #23272a;
+  --ck-color-dropdown-panel-border: rgba(255, 255, 255, 0.12);
+  --ck-color-list-background: #23272a;
+  --ck-color-list-button-hover-background: rgba(255, 255, 255, 0.08);
+  --ck-color-list-button-on-background: rgba(88, 101, 242, 0.22);
+  --ck-color-list-button-on-text: #8891f2;
+  --ck-color-panel-background: #23272a;
+  --ck-color-panel-border: rgba(255, 255, 255, 0.12);
+  --ck-color-input-background: #1a1b3a;
+  --ck-color-input-border: rgba(255, 255, 255, 0.12);
+  --ck-color-input-text: #ffffff;
+  --ck-color-labeled-field-label-background: #1a1b3a;
+  --ck-border-radius: 12px;
+}
+
+/* "O maior tamanho possível": a área de escrita ocupa a altura da janela
+   menos a barra de ferramentas, e cresce se o texto passar disso. */
+.editor-resumo .ck-editor__editable {
+  min-height: 60vh;
+  max-height: none;
+  color: #ffffff;
+}
+.editor-resumo .ck-editor__editable_inline {
+  padding: 20px 22px;
+}
+.editor-resumo .ck.ck-toolbar {
+  border-radius: 12px 12px 0 0;
+}
+.editor-resumo .ck.ck-editor__main > .ck-editor__editable {
+  border-radius: 0 0 12px 12px;
+  background: #1a1b3a;
+}
+.editor-resumo .ck.ck-editor__editable.ck-focused {
+  border-color: #5865f2;
+  box-shadow: none;
+}
+.editor-resumo .ck.ck-placeholder::before,
+.editor-resumo .ck .ck-placeholder::before {
+  color: #99aab5;
+}
+
+/* ─── Conteúdo do resumo já gravado ────────────────────────────────
+   O HTML vem do editor, então precisa dos estilos de bloco que o reset
+   do Tailwind zera. Escopo fechado em .conteudo-rico para não vazar.    */
+.conteudo-rico > *:first-child {
+  margin-top: 0;
+}
+.conteudo-rico > *:last-child {
+  margin-bottom: 0;
+}
+.conteudo-rico p {
+  margin: 0 0 10px;
+}
+.conteudo-rico h2 {
+  font-size: 1.15em;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 18px 0 8px;
+}
+.conteudo-rico h3 {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 16px 0 6px;
+}
+.conteudo-rico h4 {
+  font-size: 1em;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 14px 0 6px;
+}
+.conteudo-rico strong,
+.conteudo-rico b {
+  color: #ffffff;
+  font-weight: 600;
+}
+.conteudo-rico ul,
+.conteudo-rico ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+.conteudo-rico ul {
+  list-style: disc;
+}
+.conteudo-rico ol {
+  list-style: decimal;
+}
+.conteudo-rico li {
+  margin: 3px 0;
+}
+.conteudo-rico a {
+  color: #8891f2;
+  text-decoration: underline;
+}
+.conteudo-rico blockquote {
+  margin: 10px 0;
+  padding-left: 14px;
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  font-style: italic;
+}
+.conteudo-rico code {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+}
+.conteudo-rico pre {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+  margin: 0 0 10px;
+}
+.conteudo-rico pre code {
+  background: transparent;
+  padding: 0;
+}
+/* Figura de slide nunca estoura a largura do card, nem no celular. */
+.conteudo-rico img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+.conteudo-rico figure {
+  margin: 12px 0;
+}
+.conteudo-rico figcaption {
+  font-size: 0.86em;
+  color: #99aab5;
+  margin-top: 5px;
+}
+.conteudo-rico table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+.conteudo-rico th,
+.conteudo-rico td {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 7px 10px;
+  text-align: left;
+}
+.conteudo-rico th {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  color: #ffffff;
+}
+.conteudo-rico hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  margin: 16px 0;
+}
+
+/* No papel o resumo precisa das bordas escuras, senão tabela e citação
+   somem junto com o tema. */
+@media print {
+  .conteudo-rico th,
+  .conteudo-rico td {
+    border-color: #999999 !important;
+  }
+  .conteudo-rico th {
+    background: #f0f0f0 !important;
+  }
+  .conteudo-rico blockquote {
+    border-left-color: #999999 !important;
+  }
+  .conteudo-rico code,
+  .conteudo-rico pre {
+    background: #f4f4f4 !important;
+  }
+  .conteudo-rico a {
+    color: #111111 !important;
+    text-decoration: underline;
+  }
+  /* Imagem cortada ao meio pela quebra de página é inútil na revisão. */
+  .conteudo-rico img,
+  .conteudo-rico figure,
+  .conteudo-rico table {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

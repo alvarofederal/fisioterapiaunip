@@ -44,12 +44,20 @@ export const progressoUnidadeSchema = z.object({
   questionarioFeito: z.boolean(),
 })
 
+/**
+ * O resumo virou HTML de editor rico, então o limite cresce: formatação,
+ * tabela e legenda de imagem ocupam espaço sem o aluno escrever mais. As
+ * imagens não pesam aqui — o que entra no HTML é a URL do Cloudinary, não o
+ * base64 da figura.
+ */
+export const LIMITE_RESUMO = 200_000
+
 export const estudoTeleaulaSchema = z.object({
   status: z.enum(STATUS),
   anotacoes: z
     .string()
     .trim()
-    .max(10000, "O resumo pode ter até 10000 caracteres"),
+    .max(LIMITE_RESUMO, "O resumo ficou grande demais. Divida em outra aula."),
 })
 
 export const progressoAtividadeSchema = z.object({

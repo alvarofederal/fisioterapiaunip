@@ -27,6 +27,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // O pacote real lanca fora de um Server Component — e e justamente por
+      // isso que protege em producao. No teste, sem o stub, nenhum modulo de
+      // servidor poderia sequer ser importado.
+      "server-only": path.resolve(__dirname, "./tests/stubs/server-only.ts"),
     },
   },
 })

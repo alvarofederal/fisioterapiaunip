@@ -110,9 +110,11 @@ export default async function PaginaRevisao({
                     </h2>
                   )}
                   <h3 className="text-[14px] font-semibold text-white">{linha.teleaula}</h3>
-                  <p className="whitespace-pre-line text-[14px] leading-relaxed text-fog">
-                    {linha.texto}
-                  </p>
+                  {/* HTML limpo por allowlist na gravacao (src/lib/sanitizar.ts). */}
+                  <div
+                    className="conteudo-rico text-[14px] leading-relaxed text-fog"
+                    dangerouslySetInnerHTML={{ __html: linha.texto }}
+                  />
                 </section>
               )
             })}

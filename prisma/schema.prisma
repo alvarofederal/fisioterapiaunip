@@ -416,7 +416,10 @@ model ProgressoUnidade {
 model EstudoTeleaula {
   id        String       @id @default(cuid())
   status    StatusEstudo @default(A_ESTUDAR)
-  anotacoes String?      @db.Text
+  /// MediumText, nao Text: o resumo e HTML de editor rico e Text para em
+  /// 64 KB. As imagens entram como URL do Cloudinary, entao o que cresce e a
+  /// formatacao — tabela e legenda ocupam espaco sem o aluno escrever mais.
+  anotacoes String?      @db.MediumText
 
   teleaulaId String
   teleaula   Teleaula @relation(fields: [teleaulaId], references: [id], onDelete: Cascade)

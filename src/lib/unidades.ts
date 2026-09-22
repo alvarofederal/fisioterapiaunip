@@ -77,6 +77,28 @@ export function rotuloUnidade(unidade: { numero: number; titulo: string | null }
   return unidade.titulo ? `${base} · ${unidade.titulo}` : base
 }
 
+
+/**
+ * Se sobrou conteúdo de verdade depois de tirar as tags.
+ *
+ * O editor devolve "<p>&nbsp;</p>" para um campo esvaziado; sem esta checagem
+ * o portal acharia que existe resumo e a folha de revisão ganharia uma seção
+ * com título e nada embaixo. Uma imagem sozinha conta como conteúdo — resumo
+ * pode ser só o diagrama do slide.
+ *
+ * Mora aqui, e não em sanitizar.ts, porque é regex pura: lá dentro está o
+ * DOMPurify, que arrastaria o jsdom para o bundle do navegador.
+ */
+export function htmlTemConteudo(html: string | null | undefined): boolean {
+  if (!html) return false
+  const semTags = html
+    .replace(/<img\b[^>]*>/gi, "IMAGEM")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .trim()
+  return semTags.length > 0
+}
+
 export type Contagem = { feitos: number; total: number; percentual: number }
 
 function contar(feitos: number, total: number): Contagem {
@@ -135,7 +157,7 @@ export function anotacoesParaRevisao(unidades: UnidadeComProgresso[]): {
   for (const unidade of [...unidades].sort((a, b) => a.numero - b.numero)) {
     for (const teleaula of [...unidade.teleaulas].sort((a, b) => a.numero - b.numero)) {
       const texto = teleaula.anotacoes?.trim()
-      if (!texto) continue
+      if (!texto || !htmlTemConteudo(texto)) continue
 
       linhas.push({
         unidade: rotuloUnidade(unidade),
