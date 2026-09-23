@@ -11,11 +11,13 @@ import {
   Clock,
   RotateCcw,
 } from "lucide-react"
+import Link from "next/link"
 import { toast } from "sonner"
+import { htmlTemConteudo as temConteudo } from "@/lib/unidades"
 import { cn } from "@/lib/utils"
 import { CORES_MATERIA, STATUS_ESTUDO, diasAte, textoDeProximidade } from "@/lib/dominio"
 import type { CorTema, StatusEstudo } from "@/generated/prisma"
-import { salvarEstudo, salvarConteudoAula, excluirAula } from "../_actions"
+import { salvarEstudo, excluirAula } from "../_actions"
 import { DialogoAula } from "./dialogo-aula"
 
 export type AulaDoCronograma = {
@@ -26,6 +28,8 @@ export type AulaDoCronograma = {
   ehMeu: boolean
   horaInicio: string | null
   horaFim: string | null
+  /** Tema da aula — "Sistema Respiratório". */
+  titulo: string | null
   conteudo: string | null
   materia: { id: string; nome: string; cor: CorTema; professor: string | null }
   meuEstudo: { status: StatusEstudo; anotacoes: string | null } | null
@@ -59,8 +63,6 @@ export function CardAula({
   const [anotacoes, setAnotacoes] = useState(aula.meuEstudo?.anotacoes ?? "")
   const [anotacoesSalvas, setAnotacoesSalvas] = useState(aula.meuEstudo?.anotacoes ?? "")
   const [anotando, setAnotando] = useState(false)
-  const [editandoConteudo, setEditandoConteudo] = useState(false)
-  const [conteudo, setConteudo] = useState(aula.conteudo ?? "")
 
   const tema = CORES_MATERIA[aula.materia.cor]
   const info = STATUS_ESTUDO[status]
@@ -166,55 +168,33 @@ export function CardAula({
             </span>
           </div>
 
-          {/* Conteúdo do encontro */}
-          {editandoConteudo ? (
-            <div className="mt-2.5">
-              <textarea
-                value={conteudo}
-                onChange={(e) => setConteudo(e.target.value)}
-                maxLength={2000}
-                placeholder="O que será visto nesse encontro..."
-                className="campo min-h-[70px]"
-                autoFocus
-              />
-              <div className="mt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    iniciar(async () => {
-                      const r = await salvarConteudoAula(aula.id, conteudo)
-                      if (!r.ok) {
-                        toast.error(r.erro)
-                        return
-                      }
-                      setEditandoConteudo(false)
-                      toast.success("Conteúdo atualizado.")
-                      router.refresh()
-                    })
-                  }
-                  disabled={salvando}
-                  className="btn-primario px-3.5 py-1.5 text-[13px]"
-                >
-                  Salvar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConteudo(aula.conteudo ?? "")
-                    setEditandoConteudo(false)
-                  }}
-                  className="rounded-lg px-3 py-1.5 text-[13px] font-medium text-fog hover:bg-white/[0.06] hover:text-white"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          ) : (
-            aula.conteudo && (
-              <p className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed text-fog">
-                {aula.conteudo}
-              </p>
-            )
+          {/* O tema da aula: é o que identifica o encontro numa lista de
+              sete sábados iguais. */}
+          {aula.titulo && (
+            <p className="mt-1.5 text-[15px] font-medium text-white">{aula.titulo}</p>
+          )}
+
+          {/* A matéria dada no encontro.
+
+              Só leitura aqui: o texto virou HTML do editor, e o textarea que
+              existia neste lugar devolveria as tags cruas e apagaria a
+              formatação no primeiro salvamento. Escrever é na tela da
+              matéria, que tem o editor. */}
+          {temConteudo(aula.conteudo) && (
+            <div
+              className="conteudo-rico mt-1.5 text-[14px] leading-relaxed text-fog"
+              dangerouslySetInnerHTML={{ __html: aula.conteudo ?? "" }}
+            />
+          )}
+
+          {ehAdmin && (
+            <Link
+              href={`/painel/materias/${aula.materia.id}`}
+              className="mt-2 inline-flex items-center gap-1.5 text-[12px] font-medium text-greyple transition-colors hover:text-white"
+            >
+              <NotebookPen size={12} aria-hidden />
+              {temConteudo(aula.conteudo) ? "Editar a matéria dada" : "Escrever a matéria dada"}
+            </Link>
           )}
 
           {/* Anotação pessoal — aberta só quando se quer escrever */}
@@ -285,16 +265,8 @@ export function CardAula({
               </button>
             )}
 
-            {(ehAdmin || aula.ehMeu) && !editandoConteudo && (
+            {(ehAdmin || aula.ehMeu) && (
               <>
-                <button
-                  type="button"
-                  onClick={() => setEditandoConteudo(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-medium text-greyple transition-colors hover:bg-white/[0.08] hover:text-white"
-                >
-                  <Pencil size={12} aria-hidden />
-                  Conteúdo
-                </button>
 
                 {materias.length > 0 && (
                   <DialogoAula
@@ -302,6 +274,7 @@ export function CardAula({
                     aula={{
                       id: aula.id,
                       materiaId: aula.materia.id,
+                      titulo: aula.titulo,
                       data: aula.data,
                       horaInicio: aula.horaInicio,
                       horaFim: aula.horaFim,

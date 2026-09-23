@@ -248,8 +248,19 @@ model Aula {
   horaInicio String?  @db.VarChar(5) // "08:00"
   horaFim    String?  @db.VarChar(5) // "10:50"
 
-  /// O que será visto nesse encontro.
-  conteudo String? @db.Text
+  /// Tema da aula — "Sistema Respiratório".
+  ///
+  /// Curto de propósito, separado do conteúdo: sem ele a lista de aulas
+  /// dadas vira uma pilha de blocos de HTML e não dá para achar a aula certa
+  /// sem abrir cada uma.
+  titulo String? @db.VarChar(160)
+
+  /// O que foi visto nesse encontro, em HTML do editor.
+  ///
+  /// MediumText, não Text: Text para em 64 KB e a matéria de uma aula com
+  /// imagem e tabela passa disso. As figuras entram como URL do Cloudinary,
+  /// então o que ocupa espaço é a formatação.
+  conteudo String? @db.MediumText
 
   modalidade Modalidade @default(PRESENCIAL)
 

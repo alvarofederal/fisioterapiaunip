@@ -1,6 +1,10 @@
 // src/lib/sanitizar.ts
-import "server-only"
-
+//
+// Sem `server-only` de proposito. A guarda impediria os seeds de gravar
+// conteudo ja limpo, e a alternativa seria repetir a allowlist num segundo
+// lugar — duas listas de seguranca que um dia divergem. O risco que sobra e
+// de bundle, nao de seguranca: se um componente cliente importar isto, o
+// sanitize-html vai junto para o navegador. Nenhum importa.
 import sanitizeHtml from "sanitize-html"
 
 /**

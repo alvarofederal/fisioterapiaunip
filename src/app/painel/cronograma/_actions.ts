@@ -6,6 +6,9 @@ import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { exigirAdmin } from "@/lib/autorizacao"
 import { dataDeEncontro } from "@/lib/datas"
+import { sanitizarHtml } from "@/lib/sanitizar"
+import { htmlTemConteudo } from "@/lib/unidades"
+import { LIMITE_RESUMO } from "@/lib/validators/unidade"
 
 export type Resultado = { ok: true } | { ok: false; erro: string }
 
@@ -69,40 +72,67 @@ export async function salvarEstudo(
   return { ok: true }
 }
 
-const conteudoSchema = z
-  .string()
-  .trim()
-  .max(2000, "O conteúdo pode ter até 2000 caracteres")
+const aulaDadaSchema = z.object({
+  titulo: z
+    .string()
+    .trim()
+    .max(160, "O tema pode ter até 160 caracteres"),
+  conteudo: z
+    .string()
+    .trim()
+    .max(LIMITE_RESUMO, "A matéria da aula ficou grande demais."),
+})
 
-/** O que será visto no encontro — informação da turma, então só o ADMIN escreve. */
+/**
+ * A matéria dada no encontro: o tema e o conteúdo completo.
+ *
+ * É informação da turma, então só o ADMIN escreve — ao contrário do resumo da
+ * teleaula, que é de cada aluno. O conteúdo é HTML do editor e por isso passa
+ * pelo mesmo sanitizador: guardar HTML significa executá-lo na exibição, e
+ * limpar na ENTRADA garante que o que está gravado já é seguro.
+ */
 export async function salvarConteudoAula(
   aulaId: string,
-  conteudoBruto: unknown
+  dadosBrutos: unknown
 ): Promise<Resultado> {
   const permissao = await exigirAdmin()
   if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
-  const validacao = conteudoSchema.safeParse(conteudoBruto)
+  // Aceita a forma antiga (só o texto) para nao quebrar chamada existente.
+  const entrada =
+    typeof dadosBrutos === "string" ? { titulo: "", conteudo: dadosBrutos } : dadosBrutos
+
+  const validacao = aulaDadaSchema.safeParse(entrada)
   if (!validacao.success) {
     return { ok: false, erro: validacao.error.issues[0].message }
   }
 
+  const limpo = sanitizarHtml(validacao.data.conteudo)
+  const conteudo = htmlTemConteudo(limpo) ? limpo : null
+
   try {
     await prisma.aula.update({
       where: { id: aulaId },
-      data: { conteudo: validacao.data || null },
+      data: { titulo: validacao.data.titulo || null, conteudo },
     })
   } catch (erro) {
-    console.error("Falha ao salvar conteúdo:", erro)
+    console.error("Falha ao salvar a aula:", erro)
     return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
   }
 
+  const aula = await prisma.aula.findUnique({
+    where: { id: aulaId },
+    select: { materiaId: true },
+  })
+
   revalidatePath("/painel/cronograma")
+  if (aula) revalidatePath(`/painel/materias/${aula.materiaId}`)
   return { ok: true }
 }
 
 const aulaSchema = z.object({
   materiaId: z.string().min(1, "Escolha a matéria"),
+  titulo: z.string().trim().max(160).optional().or(z.literal("")),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   horaInicio: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida").or(z.literal("")),
   horaFim: z.string().regex(/^\d{2}:\d{2}$/, "Hora inválida").or(z.literal("")),
@@ -118,7 +148,7 @@ export async function criarAula(dadosBrutos: unknown): Promise<Resultado> {
     return { ok: false, erro: validacao.error.issues[0].message }
   }
 
-  const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
+  const { materiaId, titulo, data, horaInicio, horaFim, conteudo } = validacao.data
   const dataEncontro = dataDeEncontro(data)
 
   const jaExiste = await prisma.aula.findFirst({
@@ -133,6 +163,7 @@ export async function criarAula(dadosBrutos: unknown): Promise<Resultado> {
     await prisma.aula.create({
       data: {
         materiaId,
+        titulo: titulo || null,
         data: dataEncontro,
         horaInicio: horaInicio || null,
         horaFim: horaFim || null,
@@ -196,7 +227,7 @@ export async function atualizarAula(
   })
   if (!existente) return { ok: false, erro: "Encontro não encontrado." }
 
-  const { materiaId, data, horaInicio, horaFim, conteudo } = validacao.data
+  const { materiaId, titulo, data, horaInicio, horaFim, conteudo } = validacao.data
   const dataEncontro = dataDeEncontro(data)
 
   // Mesma matéria, mesma data, outro id = duplicata.
@@ -213,6 +244,7 @@ export async function atualizarAula(
       where: { id: aulaId },
       data: {
         materiaId,
+        titulo: titulo || null,
         data: dataEncontro,
         horaInicio: horaInicio || null,
         horaFim: horaFim || null,

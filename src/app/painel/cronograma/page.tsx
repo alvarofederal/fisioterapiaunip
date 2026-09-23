@@ -49,6 +49,7 @@ export default async function PaginaCronograma({
     ehMeu: aula.donoId !== null,
     horaInicio: aula.horaInicio,
     horaFim: aula.horaFim,
+    titulo: aula.titulo,
     conteudo: aula.conteudo,
     materia: aula.materia,
     meuEstudo: aula.estudos[0] ?? null,

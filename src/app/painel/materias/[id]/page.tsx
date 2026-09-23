@@ -16,6 +16,7 @@ import {
 import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { configuracaoLigada } from "@/lib/configuracoes-servidor"
 import { PainelUnidade } from "./_components/painel-unidade"
+import { AulasPresenciais, type AulaDada } from "./_components/aulas-presenciais"
 import { DialogoUnidade } from "./_components/dialogo-unidade"
 
 export const metadata = { title: "Matéria" }
@@ -33,6 +34,20 @@ export default async function PaginaMateria({
       where: { id },
       include: {
         semestre: { select: { ano: true, periodo: true } },
+        // Da mais recente para a mais antiga: quem abre a matéria quer a
+        // última aula dada, não a de agosto.
+        aulas: {
+          where: { donoId: null },
+          orderBy: { data: "desc" },
+          select: {
+            id: true,
+            data: true,
+            horaInicio: true,
+            horaFim: true,
+            titulo: true,
+            conteudo: true,
+          },
+        },
         unidades: {
           // A barreira entre as duas estruturas: sem dono é da turma; com
           // dono, só aparece para o próprio. Sem este OR, a unidade que um
@@ -55,7 +70,14 @@ export default async function PaginaMateria({
   if (!materia) notFound()
 
   const tema = CORES_MATERIA[materia.cor]
-  const podeCriarUnidade = ehAdmin || (await configuracaoLigada("aluno_cria_unidades"))
+
+  // A modalidade decide o que a matéria mostra por dentro: presencial tem
+  // aula com data e matéria dada; EaD tem unidade e teleaula, no ritmo de
+  // cada um. São duas formas de estudo diferentes, não duas telas parecidas.
+  const ehPresencial = materia.modalidade === "PRESENCIAL"
+  const aulas: AulaDada[] = materia.aulas
+  const podeCriarUnidade =
+    !ehPresencial && (ehAdmin || (await configuracaoLigada("aluno_cria_unidades")))
 
   const unidades: UnidadeComProgresso[] = materia.unidades.map((u) => ({
     id: u.id,
@@ -124,7 +146,7 @@ export default async function PaginaMateria({
           </p>
         )}
 
-        {unidades.length > 0 && (
+        {!ehPresencial && unidades.length > 0 && (
           <div className="mt-5">
             <div className="flex items-center justify-between text-[12px] text-greyple">
               <span>Seu progresso nesta matéria</span>
@@ -151,11 +173,16 @@ export default async function PaginaMateria({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="titulo-display text-[20px]">
-          Unidades {unidades.length > 0 && <span className="text-greyple">· {unidades.length}</span>}
+          {ehPresencial ? "Aulas dadas" : "Unidades"}{" "}
+          {(ehPresencial ? aulas.length : unidades.length) > 0 && (
+            <span className="text-greyple">
+              · {ehPresencial ? aulas.length : unidades.length}
+            </span>
+          )}
         </h2>
 
         <div className="flex flex-wrap gap-2">
-          {temResumo && (
+          {!ehPresencial && temResumo && (
             <Link href={`/painel/materias/${materia.id}/revisao`} className="btn-secundario">
               <Printer size={16} aria-hidden />
               Gerar PDF de revisão
@@ -178,7 +205,9 @@ export default async function PaginaMateria({
         </div>
       </div>
 
-      {unidades.length === 0 ? (
+      {ehPresencial ? (
+        <AulasPresenciais aulas={aulas} ehAdmin={ehAdmin} corDaMateria={tema.base} />
+      ) : unidades.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-blurple/15 text-hover-blurple">
             <Layers size={26} aria-hidden />

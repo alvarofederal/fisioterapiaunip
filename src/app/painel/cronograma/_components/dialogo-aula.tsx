@@ -20,6 +20,7 @@ type MateriaOpcao = { id: string; nome: string }
 export type AulaEditavel = {
   id: string
   materiaId: string
+  titulo: string | null
   data: Date
   horaInicio: string | null
   horaFim: string | null
@@ -45,6 +46,7 @@ export function DialogoAula({
 
   const inicial = () => ({
     materiaId: aula?.materiaId ?? materias[0]?.id ?? "",
+    titulo: aula?.titulo ?? "",
     data: aula ? paraInput(aula.data) : "",
     horaInicio: aula?.horaInicio ?? "",
     horaFim: aula?.horaFim ?? "",
@@ -129,6 +131,21 @@ export function DialogoAula({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor={`tema-${aula?.id ?? "novo"}`} className="rotulo">
+              Tema da aula
+            </label>
+            <input
+              id={`tema-${aula?.id ?? "novo"}`}
+              type="text"
+              maxLength={160}
+              value={dados.titulo}
+              onChange={(e) => mudar("titulo", e.target.value)}
+              placeholder="Ex.: Sistema Respiratório"
+              className="campo"
+            />
           </div>
 
           <div>
