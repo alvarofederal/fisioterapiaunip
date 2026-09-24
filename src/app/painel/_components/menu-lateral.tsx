@@ -152,7 +152,10 @@ export function MenuLateral({
 
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          // Volta para a tela inicial aberta, nao para o login: quem clicou
+          // em Sair quer sair, e cair num formulario de entrada parece que o
+          // logout falhou.
+          onClick={() => signOut({ redirectTo: "/" })}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-fog transition-colors hover:bg-white/[0.06] hover:text-white"
         >
           <LogOut size={18} aria-hidden />
