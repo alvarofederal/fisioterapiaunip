@@ -232,6 +232,51 @@ select.campo {
 }
 
 /* Botão primário — o único elemento saturado por superfície */
+/* ─── Botão secundário ─────────────────────────────────────────────
+   Mesmas medidas do primário — altura, raio e padding — para os dois
+   alinharem quando ficam lado a lado. A diferença é só cromática: o
+   blurple continua reservado para a ação principal, como manda o
+   DESIGN.md.
+
+   A classe era usada em seis telas sem existir no CSS: os botões saíam
+   sem borda, sem altura e desalinhados do primário ao lado.          */
+.btn-secundario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: #babcd9;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 13px 22px; /* 1px a menos: a borda completa a altura do primário */
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.btn-secundario:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+.btn-secundario:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Variante de acento, para a ação que não é a principal da tela mas
+   também não é neutra — cadastrar semestre ao lado de cadastrar matéria. */
+.btn-secundario.tom-cerulean {
+  border-color: rgba(0, 176, 244, 0.4);
+  background: rgba(0, 176, 244, 0.1);
+  color: #00b0f4;
+}
+.btn-secundario.tom-cerulean:hover:not(:disabled) {
+  background: rgba(0, 176, 244, 0.18);
+  border-color: rgba(0, 176, 244, 0.6);
+  color: #00b0f4;
+}
+
 .btn-primario {
   display: inline-flex;
   align-items: center;

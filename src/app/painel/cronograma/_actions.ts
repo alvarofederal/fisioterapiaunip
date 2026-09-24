@@ -187,6 +187,10 @@ export async function excluirAula(aulaId: string): Promise<Resultado> {
   const permissao = await permissaoNaAula(aulaId, sessao.user.id)
   if (!permissao.ok) return { ok: false, erro: permissao.erro }
 
+  // A matéria de destino sai do registro junto com a aula, então é lida
+  // antes de apagar.
+  const materiaId = permissao.aula.materiaId
+
   try {
     await prisma.aula.delete({ where: { id: aulaId } })
   } catch (erro) {
@@ -195,6 +199,8 @@ export async function excluirAula(aulaId: string): Promise<Resultado> {
   }
 
   revalidatePath("/painel/cronograma")
+  revalidatePath(`/painel/materias/${materiaId}`)
+  revalidatePath("/painel")
   return { ok: true }
 }
 
@@ -275,7 +281,7 @@ export async function atualizarAula(
 async function permissaoNaAula(aulaId: string, usuarioId: string) {
   const aula = await prisma.aula.findUnique({
     where: { id: aulaId },
-    select: { id: true, donoId: true, modalidade: true },
+    select: { id: true, donoId: true, modalidade: true, materiaId: true },
   })
   if (!aula) return { ok: false as const, erro: "Encontro não encontrado." }
 

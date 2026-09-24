@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { ChevronDown, Loader2, NotebookPen, CalendarDays } from "lucide-react"
+import { ChevronDown, Loader2, NotebookPen, CalendarDays, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { htmlTemConteudo } from "@/lib/unidades"
 import { LIMITE_RESUMO } from "@/lib/validators/unidade"
 import { cn } from "@/lib/utils"
-import { salvarConteudoAula } from "../../../cronograma/_actions"
+import { salvarConteudoAula, excluirAula } from "../../../cronograma/_actions"
 
 const EditorResumo = dynamic(
   () => import("./editor-resumo").then((m) => m.EditorResumo),
@@ -100,6 +100,28 @@ function BlocoAula({
   const [tamanho, setTamanho] = useState(0)
 
   const temMateria = htmlTemConteudo(aula.conteudo)
+
+  function apagar() {
+    // O encontro leva junto o estudo de TODA a turma nele — status e
+    // anotação de cada aluno. Sem o aviso, um clique apagaria trabalho de
+    // nove pessoas sem elas saberem.
+    const aviso = temMateria
+      ? "A matéria escrita e as anotações de estudo de toda a turma neste encontro vão junto."
+      : "As anotações de estudo de toda a turma neste encontro vão junto."
+
+    const quando = dataLonga(aula.data)
+    if (!confirm(`Excluir a aula de ${quando}?\n\n${aviso}\n\nNão há como desfazer.`)) return
+
+    iniciar(async () => {
+      const r = await excluirAula(aula.id)
+      if (!r.ok) {
+        toast.error(r.erro)
+        return
+      }
+      toast.success("Aula excluída.")
+      router.refresh()
+    })
+  }
 
   function salvar() {
     iniciar(async () => {
@@ -223,14 +245,30 @@ function BlocoAula({
             )}
 
             {ehAdmin && (
-              <button
-                type="button"
-                onClick={() => setEditando(true)}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-fog transition-colors hover:bg-white/[0.08] hover:text-white"
-              >
-                <NotebookPen size={14} aria-hidden />
-                {temMateria ? "Editar aula" : "Escrever a aula"}
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-1 border-t border-white/[0.08] pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditando(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-fog transition-colors hover:bg-white/[0.08] hover:text-white"
+                >
+                  <NotebookPen size={14} aria-hidden />
+                  {temMateria ? "Editar aula" : "Escrever a aula"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={apagar}
+                  disabled={salvando}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-ekko-red transition-colors hover:bg-ekko-red/10 disabled:opacity-50"
+                >
+                  {salvando ? (
+                    <Loader2 size={14} className="animate-spin" aria-hidden />
+                  ) : (
+                    <Trash2 size={14} aria-hidden />
+                  )}
+                  Excluir aula
+                </button>
+              </div>
             )}
           </>
         )}

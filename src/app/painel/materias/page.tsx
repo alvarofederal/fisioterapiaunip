@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BookOpen, User2, Archive, Layers, ChevronRight } from "lucide-react"
+import { BookOpen, User2, Archive, Layers, ChevronRight, Plus, Lock } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
@@ -13,6 +13,8 @@ import {
 import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { DialogoMateria, type SemestreOpcao } from "./_components/dialogo-materia"
 import { DialogoSemestre } from "./_components/dialogo-semestre"
+import { SeletorSemestre, TODOS } from "./_components/seletor-semestre"
+import { semestreVigente, podeCadastrarNoSemestre, motivoSemCadastro } from "@/lib/semestres"
 import { AcoesMateria } from "./_components/acoes-materia"
 
 // O título da aba acompanha o nome do menu — "Meus estudos" no menu e
@@ -31,13 +33,13 @@ export async function generateMetadata() {
 export default async function PaginaMaterias({
   searchParams,
 }: {
-  searchParams: Promise<{ arquivadas?: string }>
+  searchParams: Promise<{ arquivadas?: string; semestre?: string }>
 }) {
   // Recusa o acesso direto quando o ADMIN desligou a opção; o papel vem do
   // banco, não do token.
   const { usuarioId, ehAdmin } = await exigirRotaLiberada("menu_materias")
 
-  const { arquivadas } = await searchParams
+  const { arquivadas, semestre: semestreEscolhido } = await searchParams
   const vendoArquivadas = arquivadas === "1"
 
   const [materias, semestres, totalAtivas, totalArquivadas] = await Promise.all([
@@ -66,10 +68,27 @@ export default async function PaginaMaterias({
 
   const opcoesSemestre: SemestreOpcao[] = semestres
 
+  // O vigente abre a tela; escolher outro é ato deliberado do usuário.
+  const vigente = semestreVigente(semestres)
+  const selecionado =
+    semestreEscolhido === TODOS
+      ? TODOS
+      : semestres.find((s) => s.id === semestreEscolhido)?.id ?? vigente?.id ?? TODOS
+
+  const doSelecionado = semestres.find((s) => s.id === selecionado) ?? null
+
+  // Cadastrar só no semestre em curso: mexer no passado reescreveria o que a
+  // turma já cursou, e matéria criada no futuro sumiria até a virada do ano.
+  const podeCadastrar = podeCadastrarNoSemestre(doSelecionado?.id ?? null, vigente)
+  const motivo = selecionado === TODOS
+    ? "Escolha o semestre em curso para cadastrar uma matéria."
+    : motivoSemCadastro(doSelecionado, vigente)
+
   // Um grupo por semestre, na ordem dos semestres. A matéria fica sob o
   // semestre dela; a listagem plana misturava períodos assim que a turma
   // avançasse.
   const grupos = semestres
+    .filter((s) => selecionado === TODOS || s.id === selecionado)
     .map((s) => ({
       semestre: s,
       materias: materias
@@ -97,12 +116,37 @@ export default async function PaginaMaterias({
           </p>
         </div>
         {ehAdmin && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <DialogoSemestre />
-            <DialogoMateria semestres={opcoesSemestre} />
+            {podeCadastrar ? (
+              <DialogoMateria semestres={opcoesSemestre} semestrePadrao={vigente?.id} />
+            ) : (
+              <span title={motivo ?? undefined}>
+                <button type="button" className="btn-primario" disabled>
+                  <Plus size={17} aria-hidden />
+                  Nova matéria
+                </button>
+              </span>
+            )}
           </div>
         )}
       </header>
+
+      {semestres.length > 0 && (
+        <SeletorSemestre
+          semestres={semestres}
+          selecionado={selecionado}
+          idVigente={vigente?.id ?? null}
+        />
+      )}
+
+      {/* Explica por que o cadastro está travado, em vez de só desabilitar. */}
+      {ehAdmin && !podeCadastrar && motivo && (
+        <p className="flex items-start gap-2 rounded-xl border border-ember-orange/25 bg-ember-orange/[0.07] px-4 py-3 text-[13px] leading-relaxed text-ember-orange">
+          <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
+          {motivo}
+        </p>
+      )}
 
       {totalArquivadas > 0 && (
         <nav className="flex w-fit gap-1 rounded-xl border border-white/10 bg-white/[0.04] p-1">
@@ -142,9 +186,9 @@ export default async function PaginaMaterias({
             !vendoArquivadas &&
             (semestres.length === 0 ? (
               <DialogoSemestre />
-            ) : (
-              <DialogoMateria semestres={opcoesSemestre} />
-            ))}
+            ) : podeCadastrar ? (
+              <DialogoMateria semestres={opcoesSemestre} semestrePadrao={vigente?.id} />
+            ) : null)}
         </div>
       ) : (
         <div className="flex flex-col gap-9">

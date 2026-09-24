@@ -36,9 +36,12 @@ export type SemestreOpcao = { id: string; ano: number; periodo: number }
 export function DialogoMateria({
   materia,
   semestres,
+  semestrePadrao,
 }: {
   materia?: MateriaEditavel
   semestres: SemestreOpcao[]
+  /** O vigente. Sem isto a matéria nova cairia no primeiro da lista. */
+  semestrePadrao?: string
 }) {
   const editando = Boolean(materia)
   const router = useRouter()
@@ -55,7 +58,7 @@ export function DialogoMateria({
     anotacoes: materia?.anotacoes ?? "",
     cor: materia?.cor ?? ("AZUL" as CorTema),
     modalidade: materia?.modalidade ?? ("EAD" as Modalidade),
-    semestreId: materia?.semestreId ?? semestres[0]?.id ?? "",
+    semestreId: materia?.semestreId ?? semestrePadrao ?? semestres[0]?.id ?? "",
   })
 
   const [dados, setDados] = useState(valoresIniciais)

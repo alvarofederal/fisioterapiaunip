@@ -79,7 +79,7 @@ export function DialogoSemestre() {
   return (
     <Dialog open={aberto} onOpenChange={reabrir}>
       <DialogTrigger asChild>
-        <button type="button" className="btn-secundario">
+        <button type="button" className="btn-secundario tom-cerulean">
           <CalendarRange size={16} aria-hidden />
           Novo semestre
         </button>
