@@ -24,6 +24,10 @@ export const avisoSchema = z.object({
     .max(999, "Número fora da faixa"),
 
   ativo: z.boolean(),
+
+  /// Sai do portal ou não. Escolha explícita: um recado interno publicado por
+  /// engano não tem como ser despublicado da cabeça de quem já leu.
+  publico: z.boolean(),
 })
 
 export type DadosAviso = z.infer<typeof avisoSchema>

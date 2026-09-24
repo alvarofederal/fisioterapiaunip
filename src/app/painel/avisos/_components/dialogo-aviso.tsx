@@ -36,6 +36,7 @@ export type AvisoEditavel = {
   conteudo: string
   ordem: number
   ativo: boolean
+  publico: boolean
 }
 
 export function DialogoAviso({ aviso }: { aviso?: AvisoEditavel }) {
@@ -51,6 +52,7 @@ export function DialogoAviso({ aviso }: { aviso?: AvisoEditavel }) {
     conteudo: aviso?.conteudo ?? "",
     ordem: String(aviso?.ordem ?? 0),
     ativo: aviso?.ativo ?? true,
+    publico: aviso?.publico ?? true,
   })
 
   const [dados, setDados] = useState(valoresIniciais)
@@ -74,6 +76,7 @@ export function DialogoAviso({ aviso }: { aviso?: AvisoEditavel }) {
         // O input devolve texto; o schema espera número.
         ordem: Number(dados.ordem) || 0,
         ativo: dados.ativo,
+        publico: dados.publico,
       }
 
       const resultado = aviso
@@ -205,6 +208,27 @@ export function DialogoAviso({ aviso }: { aviso?: AvisoEditavel }) {
               </label>
             </div>
           </div>
+
+          {/* Fora do portal qualquer pessoa lê, inclusive quem não é da turma.
+              Por isso a escolha é por aviso, e não uma chave geral. */}
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+            <input
+              type="checkbox"
+              checked={dados.publico}
+              onChange={(e) => setDados({ ...dados, publico: e.target.checked })}
+              className="mt-0.5 size-4 shrink-0 accent-blurple"
+            />
+            <span className="min-w-0">
+              <span className="block text-[14px] font-medium text-white">
+                Mostrar também fora do portal
+              </span>
+              <span className="mt-0.5 block text-[13px] leading-relaxed text-greyple">
+                {dados.publico
+                  ? "Aparece na página inicial e em /avisos, para qualquer pessoa. Desmarque se o recado cita nome ou combinação interna."
+                  : "Fica só para quem entra no portal."}
+              </span>
+            </span>
+          </label>
 
           <DialogFooter>
             <button

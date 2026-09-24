@@ -1,4 +1,4 @@
-import { Megaphone, Archive } from "lucide-react"
+import { Megaphone, Archive, Globe, EyeOff } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import { cn } from "@/lib/utils"
@@ -21,6 +21,7 @@ export default async function PaginaAvisos() {
       conteudo: true,
       ordem: true,
       ativo: true,
+      publico: true,
       atualizadoEm: true,
     },
   })
@@ -72,12 +73,33 @@ export default async function PaginaAvisos() {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <h2 className="titulo-display text-[19px] leading-tight">{aviso.titulo}</h2>
-                {!aviso.ativo && (
-                  <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-greyple">
-                    <Archive size={11} aria-hidden />
-                    Guardado
-                  </span>
-                )}
+                <span className="flex shrink-0 flex-wrap items-center gap-2">
+                  {ehAdmin &&
+                    (aviso.publico ? (
+                      <span
+                        title="Aparece fora do portal, para qualquer pessoa"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-vivid-cerulean/15 px-2.5 py-1 text-[11px] font-semibold text-vivid-cerulean"
+                      >
+                        <Globe size={11} aria-hidden />
+                        Público
+                      </span>
+                    ) : (
+                      <span
+                        title="Só quem entra no portal vê"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-greyple"
+                      >
+                        <EyeOff size={11} aria-hidden />
+                        Só no portal
+                      </span>
+                    ))}
+
+                  {!aviso.ativo && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-greyple">
+                      <Archive size={11} aria-hidden />
+                      Guardado
+                    </span>
+                  )}
+                </span>
               </div>
 
               {/* HTML limpo por allowlist na gravação (src/lib/sanitizar.ts). */}
@@ -95,6 +117,7 @@ export default async function PaginaAvisos() {
                       conteudo: aviso.conteudo,
                       ordem: aviso.ordem,
                       ativo: aviso.ativo,
+                      publico: aviso.publico,
                     }}
                   />
                 </div>

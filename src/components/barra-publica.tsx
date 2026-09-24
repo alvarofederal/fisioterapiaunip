@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Newspaper } from "lucide-react"
+import { Newspaper, Megaphone } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { MarcaFisio } from "@/components/marca-fisio"
@@ -11,7 +11,7 @@ import { MarcaFisio } from "@/components/marca-fisio"
  * quem está logado e cai na página pública não deveria ter que se lembrar do
  * caminho de volta.
  */
-export async function BarraPublica({ atual }: { atual?: "noticias" }) {
+export async function BarraPublica({ atual }: { atual?: "noticias" | "avisos" }) {
   const sessao = await auth()
   const logado = Boolean(sessao?.user)
 
@@ -21,6 +21,20 @@ export async function BarraPublica({ atual }: { atual?: "noticias" }) {
         <MarcaFisio />
 
         <nav className="ml-auto flex items-center gap-1">
+          <Link
+            href="/avisos"
+            aria-current={atual === "avisos" ? "page" : undefined}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[15px] font-medium transition-colors",
+              atual === "avisos"
+                ? "bg-white/[0.08] text-white"
+                : "text-fog hover:bg-white/[0.06] hover:text-white"
+            )}
+          >
+            <Megaphone size={16} aria-hidden />
+            Avisos
+          </Link>
+
           <Link
             href="/noticias"
             aria-current={atual === "noticias" ? "page" : undefined}

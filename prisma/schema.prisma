@@ -529,6 +529,13 @@ model Aviso {
   /// Desligado sai do mural e continua guardado. Apagar e o caminho raro.
   ativo Boolean @default(true)
 
+  /// Se aparece tambem fora do portal, na pagina inicial aberta.
+  ///
+  /// Nasce ligado porque o uso comum e recado que a turma toda pode ver. O
+  /// campo existe para o caso contrario: aviso que cita nome de pessoa ou
+  /// combinacao interna nao deveria ir para uma pagina que qualquer um abre.
+  publico Boolean @default(true)
+
   /// Ordem na tela, do menor para o maior. O ADMIN escolhe o que fica no topo;
   /// sem isso a ordem seria a de criacao, que nao e a de importancia.
   ordem Int @default(0)
@@ -539,6 +546,6 @@ model Aviso {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  @@index([ativo, ordem])
+  @@index([ativo, publico, ordem])
   @@map("avisos")
 }

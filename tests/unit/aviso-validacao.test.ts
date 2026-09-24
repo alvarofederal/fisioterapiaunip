@@ -6,6 +6,7 @@ const MINIMO = {
   conteudo: "<p>Levar tudo no fim do semestre.</p>",
   ordem: 0,
   ativo: true,
+  publico: true,
 }
 
 describe("avisoSchema", () => {
@@ -43,5 +44,16 @@ describe("avisoSchema", () => {
     // Sem isso, um formulário incompleto publicaria sem querer.
     const { ativo, ...semEstado } = MINIMO
     expect(avisoSchema.safeParse(semEstado).success).toBe(false)
+  })
+
+  it("exige a escolha de sair ou nao do portal", () => {
+    // Sem campo explicito, um recado interno iria para a pagina aberta por
+    // omissao — e nao ha como despublicar da cabeca de quem ja leu.
+    const { publico, ...semEscolha } = MINIMO
+    expect(avisoSchema.safeParse(semEscolha).success).toBe(false)
+  })
+
+  it("aceita aviso fechado, so para quem entra", () => {
+    expect(avisoSchema.safeParse({ ...MINIMO, publico: false }).success).toBe(true)
   })
 })

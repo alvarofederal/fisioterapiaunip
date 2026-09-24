@@ -22,6 +22,9 @@ function revalidar() {
   revalidatePath("/painel/avisos")
   // O bloco de avisos abre a tela inicial, então ela também precisa cair.
   revalidatePath("/painel")
+  // E as telas abertas, onde o aviso público também aparece.
+  revalidatePath("/")
+  revalidatePath("/avisos")
 }
 
 /** Valida e limpa. O HTML entra no banco já seguro para ser renderizado. */
@@ -48,6 +51,7 @@ function prepararDados(dadosBrutos: unknown) {
       conteudo,
       ordem: validacao.data.ordem,
       ativo: validacao.data.ativo,
+      publico: validacao.data.publico,
     },
   }
 }

@@ -1,9 +1,19 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
-import { BookOpen, CalendarClock, FileDown, ShieldCheck, Newspaper, ArrowRight } from "lucide-react"
+import {
+  BookOpen,
+  CalendarClock,
+  FileDown,
+  ShieldCheck,
+  Newspaper,
+  ArrowRight,
+  Megaphone,
+  ChevronRight,
+} from "lucide-react"
 import { MarcaFisio } from "@/components/marca-fisio"
 import { BarraPublica } from "@/components/barra-publica"
+import { buscarAvisosPublicos } from "@/lib/avisos"
 import { CardNoticia } from "@/components/card-noticia"
 import { buscarNoticias } from "@/lib/noticias"
 
@@ -33,7 +43,7 @@ export default async function PaginaInicial() {
   if (sessao?.user) redirect("/painel")
 
   // Vitrine só com o que é público — ver o `select` em src/lib/noticias.ts.
-  const { proximas } = await buscarNoticias(12)
+  const [{ proximas }, avisos] = await Promise.all([buscarNoticias(12), buscarAvisosPublicos(3)])
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0e0f2d]">
@@ -48,6 +58,44 @@ export default async function PaginaInicial() {
       />
 
       <BarraPublica />
+
+      {/* Avisos, antes do hero: recado que vale o semestre precisa ser lido
+          por quem chega, nao ficar depois da apresentacao do portal. */}
+      {avisos.length > 0 && (
+        <section
+          aria-label="Avisos da turma"
+          className="relative z-10 mx-auto w-full max-w-[840px] px-5 pt-8"
+        >
+          <div className="flex flex-col gap-3">
+            {avisos.map((aviso) => (
+              <article
+                key={aviso.id}
+                className="acento-lateral overflow-hidden rounded-2xl border border-ember-orange/25 bg-ember-orange/[0.06] p-5 pl-6 text-left"
+                style={{ ["--acento" as string]: "#fda220" }}
+              >
+                <h2 className="flex items-center gap-2 titulo-display text-[17px] leading-tight">
+                  <Megaphone size={15} className="shrink-0 text-ember-orange" aria-hidden />
+                  {aviso.titulo}
+                </h2>
+
+                {/* HTML limpo por allowlist na gravacao (src/lib/sanitizar.ts). */}
+                <div
+                  className="conteudo-rico mt-2 text-[14px] leading-relaxed text-fog"
+                  dangerouslySetInnerHTML={{ __html: aviso.conteudo }}
+                />
+              </article>
+            ))}
+          </div>
+
+          <Link
+            href="/avisos"
+            className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-fog transition-colors hover:text-white"
+          >
+            Ver todos os avisos
+            <ChevronRight size={14} aria-hidden />
+          </Link>
+        </section>
+      )}
 
       {/* Hero */}
       <section className="relative z-10 mx-auto max-w-[1200px] px-5 pt-14 pb-24 text-center md:pt-24">
