@@ -45,6 +45,8 @@ export default async function PaginaMateria({
             horaInicio: true,
             horaFim: true,
             titulo: true,
+            professor: true,
+            responsavel: true,
             conteudo: true,
           },
         },
@@ -206,7 +208,12 @@ export default async function PaginaMateria({
       </div>
 
       {ehPresencial ? (
-        <AulasPresenciais aulas={aulas} ehAdmin={ehAdmin} corDaMateria={tema.base} />
+        <AulasPresenciais
+          aulas={aulas}
+          ehAdmin={ehAdmin}
+          corDaMateria={tema.base}
+          professorDaMateria={materia.professor}
+        />
       ) : unidades.length === 0 ? (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-16 text-center">
           <span className="grid size-14 place-items-center rounded-2xl bg-blurple/15 text-hover-blurple">

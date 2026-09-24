@@ -256,6 +256,19 @@ model Aula {
   /// sem abrir cada uma.
   titulo String? @db.VarChar(160)
 
+  /// Quem ministra este encontro.
+  ///
+  /// Separado do professor da materia porque palestra tem convidado: em
+  /// Extensao II, "Farmacos na dor" foi com a Prof. Elle Tanus, numa materia
+  /// da Prof. Gracielle. Vazio significa o professor da materia.
+  professor String? @db.VarChar(120)
+
+  /// Quem responde pelo conteudo, quando nao e quem ministrou.
+  ///
+  /// O cronograma oficial da UNIP traz essa coluna separada justamente para
+  /// a turma saber a quem recorrer depois da aula.
+  responsavel String? @db.VarChar(120)
+
   /// O que foi visto nesse encontro, em HTML do editor.
   ///
   /// MediumText, não Text: Text para em 64 KB e a matéria de uma aula com

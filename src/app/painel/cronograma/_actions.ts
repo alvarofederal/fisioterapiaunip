@@ -72,11 +72,18 @@ export async function salvarEstudo(
   return { ok: true }
 }
 
+const nomeDeProfessor = z
+  .string()
+  .trim()
+  .max(120, "O nome pode ter até 120 caracteres")
+
 const aulaDadaSchema = z.object({
   titulo: z
     .string()
     .trim()
     .max(160, "O tema pode ter até 160 caracteres"),
+  professor: nomeDeProfessor,
+  responsavel: nomeDeProfessor,
   conteudo: z
     .string()
     .trim()
@@ -100,7 +107,9 @@ export async function salvarConteudoAula(
 
   // Aceita a forma antiga (só o texto) para nao quebrar chamada existente.
   const entrada =
-    typeof dadosBrutos === "string" ? { titulo: "", conteudo: dadosBrutos } : dadosBrutos
+    typeof dadosBrutos === "string"
+      ? { titulo: "", professor: "", responsavel: "", conteudo: dadosBrutos }
+      : dadosBrutos
 
   const validacao = aulaDadaSchema.safeParse(entrada)
   if (!validacao.success) {
@@ -113,7 +122,12 @@ export async function salvarConteudoAula(
   try {
     await prisma.aula.update({
       where: { id: aulaId },
-      data: { titulo: validacao.data.titulo || null, conteudo },
+      data: {
+        titulo: validacao.data.titulo || null,
+        professor: validacao.data.professor || null,
+        responsavel: validacao.data.responsavel || null,
+        conteudo,
+      },
     })
   } catch (erro) {
     console.error("Falha ao salvar a aula:", erro)

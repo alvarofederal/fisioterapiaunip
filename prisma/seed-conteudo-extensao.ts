@@ -33,13 +33,24 @@ const ANOTACOES_DA_MATERIA = [
   "Entrega do relatório final: 19/12/2026.",
 ].join("\n")
 
-const CRONOGRAMA: { data: string; conteudo: string }[] = [
+const CRONOGRAMA: {
+  data: string
+  /** Convidado nomeado na temática. Vazio significa o professor da matéria. */
+  professor: string
+  /** A coluna RESPONSÁVEL do cronograma oficial. */
+  responsavel: string
+  conteudo: string
+}[] = [
   {
     data: "2026-08-15",
+    professor: "",
+    responsavel: "Prof. Camila e Prof. Gracielle",
     conteudo: ["Apresentação do Cronograma", "", "Responsáveis: Prof. Camila e Prof. Gracielle"].join("\n"),
   },
   {
     data: "2026-08-29",
+    professor: "Prof. Elle Tanus",
+    responsavel: "Prof. Gracielle",
     conteudo: [
       "Palestra: Fármacos na dor",
       "",
@@ -49,6 +60,8 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-09-12",
+    professor: "",
+    responsavel: "Prof. Gracielle",
     conteudo: [
       "Atividade: Relatório Epidemiológico",
       "",
@@ -62,10 +75,14 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-09-26",
+    professor: "",
+    responsavel: "Prof. Gracielle",
     conteudo: ["Aula Prática: Dor Radicular", "", "Responsável: Prof. Gracielle"].join("\n"),
   },
   {
     data: "2026-10-10",
+    professor: "Prof. Giulia",
+    responsavel: "Prof. Gracielle",
     conteudo: [
       "Prática: Prevenção e principais fatores de risco na dança",
       "",
@@ -75,6 +92,8 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-10-24",
+    professor: "",
+    responsavel: "Prof. Aline e Prof. Gracielle",
     conteudo: [
       "Corpo, violência e vulnerabilidade social",
       "",
@@ -83,6 +102,8 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-11-07",
+    professor: "",
+    responsavel: "Prof. Aline e Prof. Gracielle",
     conteudo: [
       "Dor, relações familiares e redes de apoio",
       "",
@@ -91,6 +112,8 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-11-21",
+    professor: "",
+    responsavel: "Prof. Aline e Prof. Gracielle",
     conteudo: [
       "Corpo: luto, depressão e ansiedade",
       "",
@@ -99,6 +122,8 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-12-05",
+    professor: "",
+    responsavel: "Prof. Aline e Prof. Gracielle",
     conteudo: [
       "Corpo no mundo: contando sua história em busca de sentido",
       "",
@@ -107,6 +132,8 @@ const CRONOGRAMA: { data: string; conteudo: string }[] = [
   },
   {
     data: "2026-12-19",
+    professor: "",
+    responsavel: "Prof. Gracielle",
     conteudo: ["ENTREGA DE RELATÓRIO", "", "Responsável: Prof. Gracielle"].join("\n"),
   },
 ]
@@ -145,7 +172,7 @@ async function main() {
     const aula = await prisma.aula.findFirst({
       // donoId nulo: cronograma da turma, não estudo particular de ninguém.
       where: { materiaId: materia.id, data: dataDeEncontro(item.data), donoId: null },
-      select: { id: true, conteudo: true },
+      select: { id: true, conteudo: true, professor: true, responsavel: true },
     })
 
     const dia = item.data.split("-").reverse().join("/")
@@ -157,9 +184,22 @@ async function main() {
       continue
     }
 
+    // Os nomes vêm do documento e não conflitam com texto escrito à mão, por
+    // isso são gravados mesmo quando o conteúdo já está preenchido.
+    const nomes: { professor?: string | null; responsavel?: string | null } = {}
+    if ((aula.professor ?? "") !== item.professor) nomes.professor = item.professor || null
+    if ((aula.responsavel ?? "") !== item.responsavel) nomes.responsavel = item.responsavel || null
+
+    if (Object.keys(nomes).length > 0) {
+      await prisma.aula.update({ where: { id: aula.id }, data: nomes })
+    }
+
     if (aula.conteudo === item.conteudo) {
       jaEstavam++
-      console.log(`  · ${dia} — ${primeiraLinha} (já estava)`)
+      console.log(
+        `  · ${dia} — ${primeiraLinha} (já estava)` +
+          (Object.keys(nomes).length > 0 ? " · professores atualizados" : "")
+      )
       continue
     }
 

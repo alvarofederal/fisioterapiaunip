@@ -9,7 +9,6 @@ import {
   Newspaper,
   ArrowRight,
   Megaphone,
-  ChevronRight,
 } from "lucide-react"
 import { MarcaFisio } from "@/components/marca-fisio"
 import { BarraPublica } from "@/components/barra-publica"
@@ -59,44 +58,6 @@ export default async function PaginaInicial() {
 
       <BarraPublica />
 
-      {/* Avisos, antes do hero: recado que vale o semestre precisa ser lido
-          por quem chega, nao ficar depois da apresentacao do portal. */}
-      {avisos.length > 0 && (
-        <section
-          aria-label="Avisos da turma"
-          className="relative z-10 mx-auto w-full max-w-[840px] px-5 pt-8"
-        >
-          <div className="flex flex-col gap-3">
-            {avisos.map((aviso) => (
-              <article
-                key={aviso.id}
-                className="acento-lateral overflow-hidden rounded-2xl border border-ember-orange/25 bg-ember-orange/[0.06] p-5 pl-6 text-left"
-                style={{ ["--acento" as string]: "#fda220" }}
-              >
-                <h2 className="flex items-center gap-2 titulo-display text-[17px] leading-tight">
-                  <Megaphone size={15} className="shrink-0 text-ember-orange" aria-hidden />
-                  {aviso.titulo}
-                </h2>
-
-                {/* HTML limpo por allowlist na gravacao (src/lib/sanitizar.ts). */}
-                <div
-                  className="conteudo-rico mt-2 text-[14px] leading-relaxed text-fog"
-                  dangerouslySetInnerHTML={{ __html: aviso.conteudo }}
-                />
-              </article>
-            ))}
-          </div>
-
-          <Link
-            href="/avisos"
-            className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-fog transition-colors hover:text-white"
-          >
-            Ver todos os avisos
-            <ChevronRight size={14} aria-hidden />
-          </Link>
-        </section>
-      )}
-
       {/* Hero */}
       <section className="relative z-10 mx-auto max-w-[1200px] px-5 pt-14 pb-24 text-center md:pt-24">
         <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[13px] font-medium text-fog backdrop-blur">
@@ -130,6 +91,44 @@ export default async function PaginaInicial() {
           </Link>
         </div>
       </section>
+
+      {/* Avisos, acima do que está chegando: recado que vale o semestre
+          inteiro pesa mais do que a próxima entrega. */}
+      {avisos.length > 0 && (
+        <section className="relative z-10 mx-auto max-w-[840px] px-5 pb-16">
+          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="titulo-display flex items-center gap-2.5 text-[24px]">
+              <Megaphone size={22} className="text-ember-orange" aria-hidden />
+              Avisos
+            </h2>
+            <Link
+              href="/avisos"
+              className="inline-flex items-center gap-1.5 text-[14px] font-medium text-ember-orange hover:underline"
+            >
+              Ver todos
+              <ArrowRight size={15} aria-hidden />
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-4 text-left">
+            {avisos.map((aviso) => (
+              <article
+                key={aviso.id}
+                className="acento-lateral overflow-hidden rounded-2xl border border-ember-orange/25 bg-ember-orange/[0.06] p-5 pl-6"
+                style={{ ["--acento" as string]: "#fda220" }}
+              >
+                <h3 className="titulo-display text-[17px] leading-tight">{aviso.titulo}</h3>
+
+                {/* HTML limpo por allowlist na gravação (src/lib/sanitizar.ts). */}
+                <div
+                  className="conteudo-rico mt-2 text-[14px] leading-relaxed text-fog"
+                  dangerouslySetInnerHTML={{ __html: aviso.conteudo }}
+                />
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* O que está chegando — a razão de alguém abrir isto sem ter conta */}
       {proximas.length > 0 && (

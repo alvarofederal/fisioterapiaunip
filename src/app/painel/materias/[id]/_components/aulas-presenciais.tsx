@@ -3,7 +3,15 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
-import { ChevronDown, Loader2, NotebookPen, CalendarDays, Trash2 } from "lucide-react"
+import {
+  ChevronDown,
+  Loader2,
+  NotebookPen,
+  CalendarDays,
+  Trash2,
+  Mic,
+  UserCheck,
+} from "lucide-react"
 import { toast } from "sonner"
 import { htmlTemConteudo } from "@/lib/unidades"
 import { LIMITE_RESUMO } from "@/lib/validators/unidade"
@@ -28,6 +36,10 @@ export type AulaDada = {
   horaInicio: string | null
   horaFim: string | null
   titulo: string | null
+  /** Quem ministra. Vazio significa o professor da matéria. */
+  professor: string | null
+  /** Quem responde pelo conteúdo, quando não é quem ministrou. */
+  responsavel: string | null
   conteudo: string | null
 }
 
@@ -54,10 +66,13 @@ export function AulasPresenciais({
   aulas,
   ehAdmin,
   corDaMateria,
+  professorDaMateria,
 }: {
   aulas: AulaDada[]
   ehAdmin: boolean
   corDaMateria: string
+  /** Usado quando a aula não diz quem ministrou — o caso comum. */
+  professorDaMateria: string | null
 }) {
   if (aulas.length === 0) {
     return (
@@ -77,7 +92,13 @@ export function AulasPresenciais({
   return (
     <div className="flex flex-col gap-4">
       {aulas.map((aula) => (
-        <BlocoAula key={aula.id} aula={aula} ehAdmin={ehAdmin} corDaMateria={corDaMateria} />
+        <BlocoAula
+          key={aula.id}
+          aula={aula}
+          ehAdmin={ehAdmin}
+          corDaMateria={corDaMateria}
+          professorDaMateria={professorDaMateria}
+        />
       ))}
     </div>
   )
@@ -87,19 +108,24 @@ function BlocoAula({
   aula,
   ehAdmin,
   corDaMateria,
+  professorDaMateria,
 }: {
   aula: AulaDada
   ehAdmin: boolean
   corDaMateria: string
+  professorDaMateria: string | null
 }) {
   const router = useRouter()
   const [salvando, iniciar] = useTransition()
   const [editando, setEditando] = useState(false)
   const [titulo, setTitulo] = useState(aula.titulo ?? "")
+  const [professor, setProfessor] = useState(aula.professor ?? "")
+  const [responsavel, setResponsavel] = useState(aula.responsavel ?? "")
   const [texto, setTexto] = useState(aula.conteudo ?? "")
   const [tamanho, setTamanho] = useState(0)
 
   const temMateria = htmlTemConteudo(aula.conteudo)
+  const ministrante = aula.professor || professorDaMateria
 
   function apagar() {
     // O encontro leva junto o estudo de TODA a turma nele — status e
@@ -125,7 +151,12 @@ function BlocoAula({
 
   function salvar() {
     iniciar(async () => {
-      const r = await salvarConteudoAula(aula.id, { titulo, conteudo: texto })
+      const r = await salvarConteudoAula(aula.id, {
+        titulo,
+        professor,
+        responsavel,
+        conteudo: texto,
+      })
       if (!r.ok) {
         toast.error(r.erro)
         return
@@ -155,6 +186,25 @@ function BlocoAula({
             {aula.horaInicio && ` · ${aula.horaInicio}`}
             {aula.horaFim && ` às ${aula.horaFim}`}
           </p>
+
+          {/* Quem deu a aula vem primeiro; a matéria é o padrão quando a
+              aula não diz nada — o caso comum. */}
+          {(ministrante || aula.responsavel) && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-greyple">
+              {ministrante && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Mic size={11} aria-hidden />
+                  {ministrante}
+                </span>
+              )}
+              {aula.responsavel && aula.responsavel !== ministrante && (
+                <span className="inline-flex items-center gap-1.5">
+                  <UserCheck size={11} aria-hidden />
+                  Responsável: {aula.responsavel}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         <span className="flex shrink-0 items-center gap-3">
@@ -189,6 +239,44 @@ function BlocoAula({
               />
             </div>
 
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor={`prof-${aula.id}`} className="rotulo">
+                  Quem deu a aula
+                </label>
+                <input
+                  id={`prof-${aula.id}`}
+                  type="text"
+                  maxLength={120}
+                  value={professor}
+                  onChange={(e) => setProfessor(e.target.value)}
+                  placeholder={professorDaMateria ?? "Ex.: Prof. Elle Tanus"}
+                  className="campo"
+                />
+                <p className="mt-1.5 text-[12px] text-greyple">
+                  Vazio usa o professor da matéria. Preencha para palestra com convidado.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor={`resp-${aula.id}`} className="rotulo">
+                  Responsável pelo conteúdo
+                </label>
+                <input
+                  id={`resp-${aula.id}`}
+                  type="text"
+                  maxLength={120}
+                  value={responsavel}
+                  onChange={(e) => setResponsavel(e.target.value)}
+                  placeholder="Ex.: Prof. Gracielle"
+                  className="campo"
+                />
+                <p className="mt-1.5 text-[12px] text-greyple">
+                  A quem recorrer depois da aula.
+                </p>
+              </div>
+            </div>
+
             <div>
               <p className="rotulo mb-2">Matéria dada</p>
               <EditorResumo valor={texto} aoMudar={setTexto} aoContar={setTamanho} />
@@ -208,6 +296,8 @@ function BlocoAula({
                   type="button"
                   onClick={() => {
                     setTitulo(aula.titulo ?? "")
+                    setProfessor(aula.professor ?? "")
+                    setResponsavel(aula.responsavel ?? "")
                     setTexto(aula.conteudo ?? "")
                     setEditando(false)
                   }}
