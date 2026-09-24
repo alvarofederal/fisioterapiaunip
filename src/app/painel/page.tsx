@@ -5,6 +5,8 @@ import { auth } from "@/lib/auth"
 import { dataQueImporta, diasAte, textoDeProximidade } from "@/lib/dominio"
 import { separarAtividades, usaCarimbo, TRABALHO_SEM_MARCO } from "@/lib/atividades"
 import { MarcosDoTrabalho } from "./_components/marcos-trabalho"
+import { MuralAvisos } from "./_components/mural-avisos"
+import { lerConfiguracoes } from "@/lib/configuracoes-servidor"
 import { CardAtividade, type AtividadeDoMural } from "./_components/card-atividade"
 
 export const metadata = { title: "Início" }
@@ -21,7 +23,9 @@ export default async function MuralDaTurma() {
     : null
   const ehAdmin = eu?.role === "ADMIN"
 
-  const [atividades, proximoPresencial] = await Promise.all([
+  const ligadas = await lerConfiguracoes()
+
+  const [atividades, proximoPresencial, avisos] = await Promise.all([
     prisma.atividade.findMany({
       where: { arquivada: false },
       include: {
@@ -39,6 +43,14 @@ export default async function MuralDaTurma() {
       include: { materia: { select: { nome: true } } },
       orderBy: { data: "asc" },
     }),
+    // Só os que estão no mural, na ordem que o ADMIN definiu.
+    ehAdmin || ligadas.menu_avisos
+      ? prisma.aviso.findMany({
+          where: { ativo: true },
+          orderBy: [{ ordem: "asc" }, { criadoEm: "desc" }],
+          select: { id: true, titulo: true, conteudo: true },
+        })
+      : Promise.resolve([]),
   ])
 
   // Regra única em src/lib/atividades.ts, com teste: o próximo a vencer abre
@@ -76,6 +88,8 @@ export default async function MuralDaTurma() {
           Tudo o que a turma precisa fazer e acompanhar, do mais próximo para o mais distante.
         </p>
       </header>
+
+      <MuralAvisos avisos={avisos} />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">

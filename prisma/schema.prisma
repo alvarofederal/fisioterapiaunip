@@ -38,6 +38,7 @@ model User {
   estudosTeleaula     EstudoTeleaula[]     @relation("EstudoTeleaulaDoUsuario")
   progressosAtividade ProgressoAtividade[] @relation("ProgressoAtividadeDoUsuario")
   unidadesProprias    Unidade[]            @relation("UnidadeDoAluno")
+  avisosCriados       Aviso[]              @relation("AvisoCriadoPor")
   estudos             Estudo[]             @relation("EstudoDoUsuario")
   aulasProprias       Aula[]               @relation("AulaDoAluno")
   atividadesCriadas   Atividade[]          @relation("AtividadeCriadaPor")
@@ -507,4 +508,37 @@ model Configuracao {
   atualizadoEm DateTime @updatedAt
 
   @@map("configuracoes")
+}
+
+// ─────────────────────────────────────────
+// MURAL DE AVISOS
+// ─────────────────────────────────────────
+
+/// Aviso fixo da turma: recado curto que vale o semestre inteiro.
+///
+/// Diferente de Atividade, que tem data e sai do mural quando passa. O aviso
+/// nao vence — fica ate o ADMIN desligar. Por isso nao tem data nenhuma: um
+/// campo de prazo aqui so criaria a duvida de por que o recado sumiu.
+model Aviso {
+  id     String @id @default(cuid())
+  titulo String @db.VarChar(160)
+
+  /// HTML do editor, limpo por allowlist antes de entrar (src/lib/sanitizar.ts).
+  conteudo String @db.MediumText
+
+  /// Desligado sai do mural e continua guardado. Apagar e o caminho raro.
+  ativo Boolean @default(true)
+
+  /// Ordem na tela, do menor para o maior. O ADMIN escolhe o que fica no topo;
+  /// sem isso a ordem seria a de criacao, que nao e a de importancia.
+  ordem Int @default(0)
+
+  criadoPorId String
+  criadoPor   User   @relation("AvisoCriadoPor", fields: [criadoPorId], references: [id])
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([ativo, ordem])
+  @@map("avisos")
 }

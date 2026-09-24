@@ -25,7 +25,8 @@
     "db:cronograma": "tsx prisma/seed-cronograma.ts",
     "db:conteudo-extensao": "tsx prisma/seed-conteudo-extensao.ts",
     "db:backfill-semestres": "tsx prisma/backfill-semestres.ts",
-    "db:aulas-anatomia": "tsx prisma/seed-aulas-anatomia.ts"
+    "db:aulas-anatomia": "tsx prisma/seed-aulas-anatomia.ts",
+    "db:avisos": "tsx prisma/seed-avisos.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

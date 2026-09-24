@@ -10,6 +10,7 @@ import {
   CalendarDays,
   ListChecks,
   Users,
+  Megaphone,
   SlidersHorizontal,
   LogOut,
   Menu,
@@ -26,6 +27,7 @@ type Papel = "ADMIN" | "ALUNO"
 
 const ITENS = [
   { href: "/painel", rotulo: "Início", icone: Home, exato: true },
+  { href: "/painel/avisos", rotulo: "Avisos", icone: Megaphone, chave: "menu_avisos" },
   // Mesma tela, nome diferente conforme quem olha: para o ADMIN é onde se
   // cadastra matéria, semestre e unidade; para o aluno é onde ele marca o que
   // estudou e escreve os resumos. Já foi só do ADMIN, quando ali de fato não

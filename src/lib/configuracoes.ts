@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarDays,
   ListChecks,
+  Megaphone,
   PencilRuler,
   Newspaper,
   UserPlus,
@@ -21,6 +22,7 @@ import {
  * avisa antes, em vez de deixar o ADMIN descobrir pelo grupo do WhatsApp.
  */
 export type ChaveConfiguracao =
+  | "menu_avisos"
   | "menu_materias"
   | "menu_cronograma"
   | "menu_atividades"
@@ -39,6 +41,15 @@ export type OpcaoConfiguracao = {
 }
 
 export const CONFIGURACOES: OpcaoConfiguracao[] = [
+  {
+    chave: "menu_avisos",
+    rotulo: "Avisos",
+    descricao:
+      "Os recados fixos da turma, no menu e no topo da tela inicial. Só você publica; a turma lê.",
+    padrao: true,
+    icone: Megaphone,
+    grupo: "Menu do aluno",
+  },
   {
     chave: "menu_materias",
     rotulo: "Meus estudos",
