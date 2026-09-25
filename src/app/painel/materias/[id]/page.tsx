@@ -34,11 +34,13 @@ export default async function PaginaMateria({
       where: { id },
       include: {
         semestre: { select: { ano: true, periodo: true } },
-        // Da mais recente para a mais antiga: quem abre a matéria quer a
-        // última aula dada, não a de agosto.
+        // Crescente, que é a ordem em que a matéria foi dada: Cardiovascular,
+        // Respiratório, Digestório. Como as aulas passadas têm data anterior,
+        // a mesma ordenação já as coloca no topo — quem abre a matéria quer
+        // rever o que teve aula, não o que ainda vai vir.
         aulas: {
           where: { donoId: null },
-          orderBy: { data: "desc" },
+          orderBy: { data: "asc" },
           select: {
             id: true,
             data: true,
