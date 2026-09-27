@@ -62,6 +62,21 @@ export default async function PaginaAtividades({
   const { aFazer, jaPassaram } = separarAtividades(atividades)
   const total = aFazer.length + jaPassaram.length
 
+  /** Traço fino entre blocos de matéria — ver src/app/painel/page.tsx. */
+  const comSeparadores = (lista: typeof atividades) =>
+    lista.map((atividade, indice) => {
+      const anterior = lista[indice - 1]
+      const mudouDeMateria =
+        indice > 0 && (anterior?.materia?.id ?? null) !== (atividade.materia?.id ?? null)
+
+      return (
+        <div key={atividade.id} className="flex flex-col gap-4">
+          {mudouDeMateria && <hr className="border-0 border-t border-white/[0.07]" />}
+          {renderizar(atividade)}
+        </div>
+      )
+    })
+
   // Os dois blocos montam o card do mesmo jeito, com as mesmas ações de ADMIN.
   const renderizar = (atividade: (typeof atividades)[number]) => (
     <CardAtividade
@@ -86,6 +101,7 @@ export default async function PaginaAtividades({
               titulo: atividade.titulo,
               descricao: atividade.descricao,
               materiaId: atividade.materiaId,
+              passadaEm: atividade.passadaEm,
               entregaEm: atividade.entregaEm,
               dataInicio: atividade.dataInicio,
               dataFim: atividade.dataFim,
@@ -190,18 +206,18 @@ export default async function PaginaAtividades({
           {aFazer.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                A fazer · {aFazer.length}
+                Do semestre · {aFazer.length}
               </h2>
-              {aFazer.map(renderizar)}
+              {comSeparadores(aFazer)}
             </section>
           )}
 
           {jaPassaram.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                Já passou · {jaPassaram.length}
+                Encerrado · {jaPassaram.length}
               </h2>
-              {jaPassaram.map(renderizar)}
+              {comSeparadores(jaPassaram)}
             </section>
           )}
         </div>

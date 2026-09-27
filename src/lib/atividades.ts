@@ -135,3 +135,62 @@ export function usaCarimbo(atividade: {
 export function marcosCumpridos(progresso: ProgressoDoTrabalho): number {
   return MARCOS_DO_TRABALHO.filter(({ campo }) => progresso[campo]).length
 }
+
+// ─── Situação do trabalho ────────────────────────────────────────
+
+/**
+ * Em que pé está o trabalho, do ponto de vista da turma.
+ *
+ * Com uma data só — a de entrega — os três trabalhos do semestre apareciam
+ * como "19 de dez" e "A fazer", sem dizer se já tinham sido passados em sala
+ * ou se ainda viriam. São dois momentos distintos: o professor passa numa
+ * aula, a turma junta tudo, e a entrega é uma só, no fim do semestre.
+ */
+export const SITUACOES_DO_TRABALHO = {
+  A_RECEBER: {
+    rotulo: "Ainda não passado",
+    curto: "A receber",
+    cor: "#babcd9",
+    suave: "rgba(186, 188, 217, 0.12)",
+  },
+  AGUARDANDO_ENTREGA: {
+    rotulo: "Aguardar entrega do relatório",
+    curto: "Aguardando entrega",
+    cor: "#fda220",
+    suave: "rgba(253, 162, 32, 0.16)",
+  },
+  ENTREGUE: {
+    rotulo: "Prazo de entrega encerrado",
+    curto: "Encerrado",
+    cor: "#99aab5",
+    suave: "rgba(153, 170, 181, 0.12)",
+  },
+} as const
+
+export type SituacaoDoTrabalho = keyof typeof SITUACOES_DO_TRABALHO
+
+export type TrabalhoComDatas = {
+  passadaEm: Date | null
+  entregaEm: Date | null
+}
+
+/**
+ * A situação sai das duas datas, nesta ordem de decisão:
+ *
+ * entrega no passado  → encerrado, não importa quando foi passado
+ * passado em sala     → aguardando a entrega
+ * resto               → ainda não passado
+ *
+ * Sem `passadaEm` preenchido, um trabalho com entrega futura cai em
+ * "ainda não passado" — que é literalmente o que se sabe dele.
+ */
+export function situacaoDoTrabalho(
+  trabalho: TrabalhoComDatas,
+  referencia = new Date()
+): SituacaoDoTrabalho {
+  if (trabalho.entregaEm && diasAte(trabalho.entregaEm, referencia) < 0) return "ENTREGUE"
+  if (trabalho.passadaEm && diasAte(trabalho.passadaEm, referencia) <= 0) {
+    return "AGUARDANDO_ENTREGA"
+  }
+  return "A_RECEBER"
+}

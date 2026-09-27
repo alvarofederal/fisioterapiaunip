@@ -26,7 +26,8 @@
     "db:conteudo-extensao": "tsx prisma/seed-conteudo-extensao.ts",
     "db:backfill-semestres": "tsx prisma/backfill-semestres.ts",
     "db:aulas-anatomia": "tsx prisma/seed-aulas-anatomia.ts",
-    "db:avisos": "tsx prisma/seed-avisos.ts"
+    "db:avisos": "tsx prisma/seed-avisos.ts",
+    "db:passada-trabalhos": "tsx prisma/seed-passada-trabalhos.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

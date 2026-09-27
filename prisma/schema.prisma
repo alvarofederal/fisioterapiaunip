@@ -120,6 +120,15 @@ model Atividade {
   tipo      TipoAtividade @default(TRABALHO_EXTRA_CLASSE)
 
   /// Prazo de entrega — usado por TRABALHO_EXTRA_CLASSE.
+  /// Quando o professor passou o trabalho em sala.
+  ///
+  /// Separado da entrega porque sao coisas diferentes: o de Cardiovascular
+  /// foi passado em agosto e so e entregue em dezembro, junto com os outros.
+  /// Com uma data so, a turma via "19 de dez" e nao sabia se aquilo ja tinha
+  /// sido passado ou ainda ia ser.
+  passadaEm DateTime?
+
+  /// Quando a folha vai ser entregue ao professor.
   entregaEm DateTime?
 
   /// Quando acontece — usado por EVENTO, SEMINARIO e CONGRESSO.
@@ -161,6 +170,7 @@ model Atividade {
   @@index([materiaId])
   @@index([criadoPorId])
   @@index([tipo])
+  @@index([passadaEm])
   @@index([entregaEm])
   @@index([dataInicio])
   @@index([arquivada, criadoEm])

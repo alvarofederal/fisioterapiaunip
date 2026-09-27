@@ -1,6 +1,7 @@
 import { CalendarClock, Paperclip, Lock } from "lucide-react"
 import type { CorTema, TipoAtividade } from "@/generated/prisma"
 import { CORES_MATERIA, TIPOS_ATIVIDADE, diasAte } from "@/lib/dominio"
+import { situacaoDoTrabalho, SITUACOES_DO_TRABALHO } from "@/lib/atividades"
 import { cn } from "@/lib/utils"
 
 /**
@@ -16,6 +17,7 @@ export type NoticiaPublica = {
   id: string
   tipo: TipoAtividade
   titulo: string
+  passadaEm: Date | null
   entregaEm: Date | null
   dataInicio: Date | null
   dataFim: Date | null
@@ -58,7 +60,14 @@ export function CardNoticia({ noticia }: { noticia: NoticiaPublica }) {
 
   const data = noticia.entregaEm ?? noticia.dataInicio
   const ehEntrega = Boolean(noticia.entregaEm)
-  const info = selo(data, ehEntrega)
+
+  // Trabalho mostra a situacao, nao a data: os tres do semestre vencem no
+  // mesmo dia e "19 de dez" nao distinguia nenhum deles.
+  const ehTrabalho = noticia.tipo === "TRABALHO_EXTRA_CLASSE"
+  const situacao = SITUACOES_DO_TRABALHO[situacaoDoTrabalho(noticia)]
+  const info = ehTrabalho
+    ? { texto: situacao.rotulo, cor: situacao.cor, fundo: situacao.suave }
+    : selo(data, ehEntrega)
   const passou = data ? diasAte(data) < 0 : false
 
   return (

@@ -97,7 +97,7 @@ export default async function PaginaInicial() {
           <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="titulo-display flex items-center gap-2.5 text-[24px]">
               <Newspaper size={22} className="text-hover-blurple" aria-hidden />
-              O que vem aí
+              Trabalhos e atividades
             </h2>
             <Link
               href="/noticias"

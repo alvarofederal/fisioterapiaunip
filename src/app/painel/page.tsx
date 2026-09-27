@@ -57,6 +57,27 @@ export default async function MuralDaTurma() {
   // a lista e o que já passou desce.
   const { aFazer, jaPassaram } = separarAtividades(atividades)
 
+  /**
+   * Um traço fino separa um bloco de matéria do próximo.
+   *
+   * Sem ele, cinco cards seguidos viram uma parede: dá para ler o selo de
+   * cada matéria, mas não para ver de relance onde termina Anatomia e começa
+   * Extensão II.
+   */
+  const comSeparadores = (lista: typeof atividades) =>
+    lista.map((atividade, indice) => {
+      const anterior = lista[indice - 1]
+      const mudouDeMateria =
+        indice > 0 && (anterior?.materia?.id ?? null) !== (atividade.materia?.id ?? null)
+
+      return (
+        <div key={atividade.id} className="flex flex-col gap-4">
+          {mudouDeMateria && <hr className="border-0 border-t border-white/[0.07]" />}
+          {renderizar(atividade)}
+        </div>
+      )
+    })
+
   const renderizar = (atividade: (typeof atividades)[number]) => (
     <CardAtividade
       key={atividade.id}
@@ -176,18 +197,18 @@ export default async function MuralDaTurma() {
           {aFazer.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                A fazer · {aFazer.length}
+                Do semestre · {aFazer.length}
               </h2>
-              {aFazer.map(renderizar)}
+              {comSeparadores(aFazer)}
             </section>
           )}
 
           {jaPassaram.length > 0 && (
             <section className="flex flex-col gap-4">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                Já passou · {jaPassaram.length}
+                Encerrado · {jaPassaram.length}
               </h2>
-              {jaPassaram.map(renderizar)}
+              {comSeparadores(jaPassaram)}
             </section>
           )}
         </>

@@ -26,7 +26,8 @@ export const atividadeSchema = z
     descricao: z.string().trim().max(3000, "A descrição pode ter até 3000 caracteres").optional().or(z.literal("")),
     materiaId: z.string().optional().or(z.literal("")),
 
-    entregaEm: dataOpcional,
+    passadaEm: dataOpcional,
+  entregaEm: dataOpcional,
     dataInicio: dataOpcional,
     dataFim: dataOpcional,
     horaInicio: horaOpcional,

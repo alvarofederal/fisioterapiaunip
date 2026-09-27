@@ -2,6 +2,7 @@ import Link from "next/link"
 import {
   Paperclip,
   CalendarClock,
+  CalendarCheck,
   MapPin,
   Users,
   Clock,
@@ -21,11 +22,25 @@ import {
   diasAte,
   formatarTamanho,
 } from "@/lib/dominio"
+import { situacaoDoTrabalho, SITUACOES_DO_TRABALHO } from "@/lib/atividades"
 import { cn } from "@/lib/utils"
 
 export type AtividadeDoMural = Atividade & {
   materia: Pick<Materia, "id" | "nome" | "cor" | "modalidade"> | null
   anexos: Anexo[]
+}
+
+/**
+ * Selo do trabalho: diz em que pé ele está, não só quando vence.
+ *
+ * "19 de dez" sozinho não informava nada — os três trabalhos do semestre
+ * vencem no mesmo dia. O que a turma precisa saber é se já foi passado em
+ * sala e está só esperando a entrega conjunta.
+ */
+function seloDeTrabalho(atividade: { passadaEm: Date | null; entregaEm: Date | null }) {
+  const situacao = situacaoDoTrabalho(atividade)
+  const info = SITUACOES_DO_TRABALHO[situacao]
+  return { texto: info.rotulo, cor: info.cor, fundo: info.suave }
 }
 
 /** Selo de prazo: muda de cor conforme a urgência. */
@@ -98,7 +113,12 @@ export function CardAtividade({
 
   const data = dataQueImporta(atividade)
   const ehEntrega = Boolean(atividade.entregaEm)
-  const info = selo(data, ehEntrega)
+
+  // Trabalho tem duas datas e o selo precisa dizer em que pé ele está.
+  // Evento e congresso continuam com o selo de proximidade, que é o que
+  // importa para quem vai comparecer.
+  const ehTrabalho = atividade.tipo === "TRABALHO_EXTRA_CLASSE"
+  const info = ehTrabalho ? seloDeTrabalho(atividade) : selo(data, ehEntrega)
   const passou = data ? diasAte(data) < 0 : false
 
   // Se não há nada além do cabeçalho, abrir não mostraria nada — o card fica
@@ -112,6 +132,7 @@ export function CardAtividade({
     atividade.cargaHoraria !== null ||
     Boolean(atividade.horaInicio) ||
     Boolean(atividade.dataFim) ||
+    Boolean(atividade.passadaEm) ||
     Boolean(acoes)
 
   const classesCartao = cn(
@@ -165,6 +186,12 @@ export function CardAtividade({
 
       {/* Datas e detalhes, cada tipo mostrando só o que usa */}
       <div className="grid grid-cols-1 gap-3 rounded-xl border border-white/[0.08] bg-black/20 p-3.5 sm:grid-cols-2">
+        {atividade.passadaEm && (
+          <Detalhe icone={CalendarCheck} rotulo="Passado em sala">
+            {dataLonga(atividade.passadaEm)}
+          </Detalhe>
+        )}
+
         {atividade.entregaEm && (
           <Detalhe icone={CalendarClock} rotulo="Entregar até">
             {dataLonga(atividade.entregaEm)}

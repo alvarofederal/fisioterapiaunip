@@ -27,6 +27,7 @@ export type AtividadeEditavel = {
   titulo: string
   descricao: string | null
   materiaId: string | null
+  passadaEm: Date | null
   entregaEm: Date | null
   dataInicio: Date | null
   dataFim: Date | null
@@ -51,6 +52,7 @@ function estadoInicial(atividade?: AtividadeEditavel) {
     titulo: atividade?.titulo ?? "",
     descricao: atividade?.descricao ?? "",
     materiaId: atividade?.materiaId ?? "",
+    passadaEm: paraInput(atividade?.passadaEm ?? null),
     entregaEm: paraInput(atividade?.entregaEm ?? null),
     dataInicio: paraInput(atividade?.dataInicio ?? null),
     dataFim: paraInput(atividade?.dataFim ?? null),
@@ -231,21 +233,48 @@ export function DialogoAtividade({
           </div>
 
           {campos.usaEntrega && (
-            <div>
-              <label htmlFor="entregaEm" className="rotulo">
-                Prazo de entrega <span className="text-ekko-red">*</span>
-              </label>
-              <input
-                id="entregaEm"
-                type="date"
-                value={dados.entregaEm}
-                onChange={(e) => mudar("entregaEm", e.target.value)}
-                aria-invalid={Boolean(erroDe("entregaEm"))}
-                className="campo"
-              />
-              {erroDe("entregaEm") && (
-                <p className="mt-2 text-[12px] text-ekko-red">{erroDe("entregaEm")}</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {campos.usaPassada && (
+                <div>
+                  <label htmlFor="passadaEm" className="rotulo">
+                    Passado em sala
+                  </label>
+                  <input
+                    id="passadaEm"
+                    type="date"
+                    value={dados.passadaEm}
+                    onChange={(e) => mudar("passadaEm", e.target.value)}
+                    aria-invalid={Boolean(erroDe("passadaEm"))}
+                    className="campo"
+                  />
+                  <p className="mt-1.5 text-[12px] text-greyple">
+                    A partir dessa data o trabalho aparece como aguardando entrega.
+                  </p>
+                  {erroDe("passadaEm") && (
+                    <p className="mt-2 text-[12px] text-ekko-red">{erroDe("passadaEm")}</p>
+                  )}
+                </div>
               )}
+
+              <div>
+                <label htmlFor="entregaEm" className="rotulo">
+                  Prazo de entrega <span className="text-ekko-red">*</span>
+                </label>
+                <input
+                  id="entregaEm"
+                  type="date"
+                  value={dados.entregaEm}
+                  onChange={(e) => mudar("entregaEm", e.target.value)}
+                  aria-invalid={Boolean(erroDe("entregaEm"))}
+                  className="campo"
+                />
+                <p className="mt-1.5 text-[12px] text-greyple">
+                  Quando a folha vai para o professor.
+                </p>
+                {erroDe("entregaEm") && (
+                  <p className="mt-2 text-[12px] text-ekko-red">{erroDe("entregaEm")}</p>
+                )}
+              </div>
             </div>
           )}
 

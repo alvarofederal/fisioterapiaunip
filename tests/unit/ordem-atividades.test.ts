@@ -8,6 +8,8 @@ import {
   marcosCumpridos,
   MARCOS_DO_TRABALHO,
   TRABALHO_SEM_MARCO,
+  situacaoDoTrabalho,
+  SITUACOES_DO_TRABALHO,
 } from "@/lib/atividades"
 import { dataDeEncontro } from "@/lib/datas"
 
@@ -212,5 +214,65 @@ describe("marcos do trabalho presencial", () => {
 
   it("a ordem é a da vida real: carimbo antes de correção", () => {
     expect(MARCOS_DO_TRABALHO.map((m) => m.campo)).toEqual(["carimbado", "corrigido"])
+  })
+})
+
+describe("situacaoDoTrabalho", () => {
+  const HOJE_REF = new Date("2026-09-27T10:00:00")
+  const d = (iso: string) => dataDeEncontro(iso)
+
+  it("passado em sala e entrega lá na frente: aguardando entrega", () => {
+    // O caso dos três trabalhos do semestre: passados em agosto e setembro,
+    // todos entregues junto em 19/12.
+    const s = situacaoDoTrabalho(
+      { passadaEm: d("2026-09-19"), entregaEm: d("2026-12-19") },
+      HOJE_REF
+    )
+    expect(s).toBe("AGUARDANDO_ENTREGA")
+    expect(SITUACOES_DO_TRABALHO[s].rotulo).toBe("Aguardar entrega do relatório")
+  })
+
+  it("passado hoje já conta como passado", () => {
+    const s = situacaoDoTrabalho(
+      { passadaEm: d("2026-09-27"), entregaEm: d("2026-12-19") },
+      HOJE_REF
+    )
+    expect(s).toBe("AGUARDANDO_ENTREGA")
+  })
+
+  it("ainda não passado em sala", () => {
+    const s = situacaoDoTrabalho(
+      { passadaEm: d("2026-10-17"), entregaEm: d("2026-12-19") },
+      HOJE_REF
+    )
+    expect(s).toBe("A_RECEBER")
+  })
+
+  it("sem data de quando foi passado, fica como a receber", () => {
+    // É o que se sabe dele: existe, vence em dezembro, e ninguém disse quando
+    // foi para a sala.
+    const s = situacaoDoTrabalho({ passadaEm: null, entregaEm: d("2026-12-19") }, HOJE_REF)
+    expect(s).toBe("A_RECEBER")
+  })
+
+  it("entrega vencida encerra, mesmo tendo sido passado", () => {
+    const s = situacaoDoTrabalho(
+      { passadaEm: d("2026-08-08"), entregaEm: d("2026-09-01") },
+      HOJE_REF
+    )
+    expect(s).toBe("ENTREGUE")
+  })
+
+  it("a entrega decide antes da data de quando foi passado", () => {
+    // Trabalho com as duas datas no passado é encerrado, não aguardando.
+    const s = situacaoDoTrabalho(
+      { passadaEm: d("2026-09-20"), entregaEm: d("2026-09-25") },
+      HOJE_REF
+    )
+    expect(s).toBe("ENTREGUE")
+  })
+
+  it("sem data nenhuma não quebra", () => {
+    expect(situacaoDoTrabalho({ passadaEm: null, entregaEm: null }, HOJE_REF)).toBe("A_RECEBER")
   })
 })

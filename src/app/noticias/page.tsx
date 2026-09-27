@@ -53,7 +53,7 @@ export default async function PaginaNoticias() {
             {proximas.length > 0 && (
               <section className="flex flex-col gap-4">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                  A fazer · {proximas.length}
+                  Do semestre · {proximas.length}
                 </h2>
                 {proximas.map((noticia) => (
                   <CardNoticia key={noticia.id} noticia={noticia} />
@@ -64,7 +64,7 @@ export default async function PaginaNoticias() {
             {passadas.length > 0 && (
               <section className="flex flex-col gap-4">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-greyple">
-                  Já passou · {passadas.length}
+                  Encerrado · {passadas.length}
                 </h2>
                 {passadas.map((noticia) => (
                   <CardNoticia key={noticia.id} noticia={noticia} />

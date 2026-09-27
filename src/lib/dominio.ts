@@ -109,6 +109,8 @@ export const TIPOS_ATIVIDADE: Record<
     suave: string
     campos: {
       materiaObrigatoria: boolean
+      /** Data em que o professor passou o trabalho em sala. */
+      usaPassada: boolean
       usaEntrega: boolean
       usaData: boolean
       usaPeriodo: boolean
@@ -128,6 +130,7 @@ export const TIPOS_ATIVIDADE: Record<
     suave: "rgba(0, 176, 244, 0.14)",
     campos: {
       materiaObrigatoria: true,
+      usaPassada: true,
       usaEntrega: true,
       usaData: false,
       usaPeriodo: false,
@@ -146,6 +149,7 @@ export const TIPOS_ATIVIDADE: Record<
     suave: "rgba(167, 139, 250, 0.16)",
     campos: {
       materiaObrigatoria: true,
+      usaPassada: false,
       usaEntrega: false,
       usaData: true,
       usaPeriodo: false,
@@ -164,6 +168,7 @@ export const TIPOS_ATIVIDADE: Record<
     suave: "rgba(87, 242, 135, 0.16)",
     campos: {
       materiaObrigatoria: false,
+      usaPassada: false,
       usaEntrega: false,
       usaData: true,
       usaPeriodo: false,
@@ -182,6 +187,7 @@ export const TIPOS_ATIVIDADE: Record<
     suave: "rgba(253, 162, 32, 0.16)",
     campos: {
       materiaObrigatoria: false,
+      usaPassada: false,
       usaEntrega: false,
       usaData: false,
       usaPeriodo: true,
