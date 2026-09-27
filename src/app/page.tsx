@@ -35,37 +35,22 @@ export default async function PaginaInicial() {
       <BarraPublica />
 
       {/* Hero */}
-      <section className="relative z-10 mx-auto max-w-[1200px] px-5 pt-14 pb-24 text-center md:pt-24">
-        <span className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[13px] font-medium text-fog backdrop-blur">
+      <section className="relative z-10 mx-auto max-w-[1200px] px-5 pt-8 pb-14 text-center md:pt-12">
+        <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-[13px] font-medium text-fog backdrop-blur">
           <ShieldCheck size={14} className="text-spring-green" aria-hidden />
           Acesso só para a turma
         </span>
 
-        <h1 className="titulo-display mx-auto max-w-[900px] text-[31px] min-[420px]:text-[38px] sm:text-[52px] md:text-[64px]">
+        <h1 className="titulo-display mx-auto max-w-[900px] text-[23px] min-[420px]:text-[28px] sm:text-[39px] md:text-[48px]">
           O portal da turma,
           <br />
           sem ninguém se perder.
         </h1>
 
-        <p className="mx-auto mt-7 max-w-[620px] text-[16px] leading-relaxed text-fog md:text-[18px]">
+        <p className="mx-auto mt-5 max-w-[620px] text-[16px] leading-relaxed text-fog md:text-[18px]">
           Matérias, trabalhos, datas de entrega e o material dos professores —
           tudo num lugar só, acessível para todo mundo da turma.
         </p>
-
-        <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-          <Link
-            href="/register"
-            className="inline-flex items-center justify-center rounded-xl bg-blurple px-6 py-[19px] text-[16px] font-medium text-white transition-colors hover:bg-dark-blurple"
-          >
-            Criar minha conta
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-[15px] text-[16px] font-medium text-[#23272a] transition-transform hover:scale-[1.02]"
-          >
-            Já tenho conta
-          </Link>
-        </div>
       </section>
 
       {/* Avisos, acima do que está chegando: recado que vale o semestre
