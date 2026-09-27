@@ -138,10 +138,6 @@
 
 /* ── Painéis de seção ──────────────────────────────────────────
    Cada painel é um palco com a própria iluminação. */
-.painel-recurso {
-  border-radius: 24px;
-  padding: 32px;
-}
 
 /* Filete colorido da matéria no card */
 .acento-lateral::before {

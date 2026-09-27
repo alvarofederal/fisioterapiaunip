@@ -2,9 +2,6 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import {
-  BookOpen,
-  CalendarClock,
-  FileDown,
   ShieldCheck,
   Newspaper,
   ArrowRight,
@@ -15,27 +12,6 @@ import { BarraPublica } from "@/components/barra-publica"
 import { buscarAvisosPublicos } from "@/lib/avisos"
 import { CardNoticia } from "@/components/card-noticia"
 import { buscarNoticias } from "@/lib/noticias"
-
-const RECURSOS = [
-  {
-    icone: BookOpen,
-    cor: "#fda220",
-    titulo: "Matérias e professores",
-    texto: "Quem dá a aula, em que dia, com as anotações que importam.",
-  },
-  {
-    icone: CalendarClock,
-    cor: "#eb459e",
-    titulo: "Trabalhos com prazo",
-    texto: "Data de entrega em destaque. Ninguém mais descobre em cima da hora.",
-  },
-  {
-    icone: FileDown,
-    cor: "#57f287",
-    titulo: "Slides e fotos do quadro",
-    texto: "O material do professor fica guardado e pronto para baixar.",
-  },
-]
 
 export default async function PaginaInicial() {
   const sessao = await auth()
@@ -154,27 +130,6 @@ export default async function PaginaInicial() {
           </div>
         </section>
       )}
-
-      {/* Painéis de recurso — cada um com a própria iluminação */}
-      <section className="relative z-10 mx-auto max-w-[1200px] px-5 pb-28">
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {RECURSOS.map(({ icone: Icone, cor, titulo, texto }) => (
-            <article
-              key={titulo}
-              className="painel-recurso border border-white/10 bg-white/[0.04] backdrop-blur-sm transition-colors hover:border-white/20"
-            >
-              <span
-                className="mb-5 inline-grid size-12 place-items-center rounded-2xl"
-                style={{ background: `${cor}1f`, color: cor }}
-              >
-                <Icone size={22} aria-hidden />
-              </span>
-              <h2 className="titulo-display mb-2 text-[20px] leading-tight">{titulo}</h2>
-              <p className="text-[15px] leading-relaxed text-fog">{texto}</p>
-            </article>
-          ))}
-        </div>
-      </section>
 
       <footer className="relative z-10 border-t border-white/10 bg-[#23272a]">
         <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-3 px-5 py-10 text-[14px] text-fog sm:flex-row">
