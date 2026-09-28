@@ -50,6 +50,14 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
    a MySQL é compartilhada e conexão é recurso escasso.
 4. **Toda rota sob `/painel` valida no servidor.** O middleware só confere o cookie —
    ele roda no edge e não consulta o banco. Papel de ADMIN se verifica na página.
+4b. **Página pública nova entra em `ROTAS_PUBLICAS`, em `src/middleware.ts`.** Sem isso, quem
+   não está logado é mandado para o login. Foi o que aconteceu com `/avisos`.
+   O middleware mora em `src/`, ao lado de `app/`: na raiz ele só rodava no build de
+   produção, e o dev nunca reproduzia o bloqueio. Para conferir uma rota pública, o sinal
+   de que o middleware está ativo é o `?redirect=` no 307 de `/painel`.
+9d. **"Hoje" para data de encontro é `hojeNoBrasil()`**, nunca `new Date()`. A aula de sábado
+   está gravada como sábado 00:00Z, que é sexta às 21h aqui — comparar com o agora faz a
+   aula sumir no próprio dia. Para contar dias, `diasAteNoBrasil()`.
 5. **Não revele se um e-mail existe.** O login recusa senha errada e conta inativa com a
    mesma mensagem, de propósito.
 6. **Sempre validar entrada com Zod** em Server Actions e API Routes.
@@ -83,14 +91,18 @@ import { CORES_MATERIA } from "@/lib/dominio"  // vocabulários
 
 | Rota | Acesso | Descrição |
 |------|--------|-----------|
-| `/` | Público | Apresentação + entrada |
+| `/` | Público | Próxima aula, avisos e trabalhos da turma |
+| `/avisos` | Público | Avisos marcados como públicos |
+| `/noticias` | Público | Trabalhos e atividades, sem descrição nem arquivo |
 | `/login` | Público | Entrar |
 | `/register` | Público | Criar conta (nasce inativa) |
 | `/painel` | Logado | Mural da turma |
-| `/painel/materias` | Logado | Matérias do semestre |
+| `/painel/avisos` | Logado | Avisos; ADMIN publica |
+| `/painel/materias` | Logado | "Meus estudos" para o aluno: aulas dadas ou unidades do AVA |
 | `/painel/cronograma` | Logado | Encontros do semestre + acompanhamento pessoal de estudo |
-| `/painel/trabalhos` | Logado | Trabalhos e eventos |
+| `/painel/atividades` | Logado | Trabalhos, seminários, eventos e congressos |
 | `/painel/usuarios` | **ADMIN** | Liberar e gerenciar contas |
+| `/painel/configuracoes` | **ADMIN** | O que a turma vê |
 | `/api/register` | Público | Cadastro (rate limit por IP) |
 | `/api/upload` | Logado | Upload para o Cloudinary |
 | `/api/auth/[...nextauth]` | — | Handlers do NextAuth |

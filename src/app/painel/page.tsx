@@ -7,6 +7,7 @@ import { separarAtividades, usaCarimbo, TRABALHO_SEM_MARCO } from "@/lib/ativida
 import { MarcosDoTrabalho } from "./_components/marcos-trabalho"
 import { MuralAvisos } from "./_components/mural-avisos"
 import { lerConfiguracoes } from "@/lib/configuracoes-servidor"
+import { hojeNoBrasil, diasAteNoBrasil } from "@/lib/datas"
 import { CardAtividade, type AtividadeDoMural } from "./_components/card-atividade"
 
 export const metadata = { title: "Início" }
@@ -39,7 +40,10 @@ export default async function MuralDaTurma() {
     }),
     // Encontro presencial da turma: dono nulo é o que separa do EaD de cada um.
     prisma.aula.findFirst({
-      where: { modalidade: "PRESENCIAL", donoId: null, data: { gte: new Date() } },
+      // hojeNoBrasil, não new Date(): a aula de sábado está gravada como
+      // sábado 00:00Z, que é sexta às 21h aqui — com o agora, ela sumia do
+      // card no próprio dia.
+      where: { modalidade: "PRESENCIAL", donoId: null, data: { gte: hojeNoBrasil() } },
       include: { materia: { select: { nome: true } } },
       orderBy: { data: "asc" },
     }),
@@ -131,7 +135,7 @@ export default async function MuralDaTurma() {
                 {proximoPresencial.materia.nome}
               </p>
               <p className="text-[12px] text-greyple">
-                {textoDeProximidade(diasAte(proximoPresencial.data))}
+                {textoDeProximidade(diasAteNoBrasil(proximoPresencial.data))}
                 {proximoPresencial.horaInicio ? ` · ${proximoPresencial.horaInicio}` : ""}
               </p>
             </>

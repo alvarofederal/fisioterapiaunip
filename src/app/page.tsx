@@ -6,19 +6,26 @@ import {
   Newspaper,
   ArrowRight,
   Megaphone,
+  CalendarDays,
 } from "lucide-react"
 import { MarcaFisio } from "@/components/marca-fisio"
 import { BarraPublica } from "@/components/barra-publica"
 import { buscarAvisosPublicos } from "@/lib/avisos"
 import { CardNoticia } from "@/components/card-noticia"
 import { buscarNoticias } from "@/lib/noticias"
+import { buscarProximaAula } from "@/lib/aulas-publicas"
+import { CardProximaAula } from "@/components/card-proxima-aula"
 
 export default async function PaginaInicial() {
   const sessao = await auth()
   if (sessao?.user) redirect("/painel")
 
   // Vitrine só com o que é público — ver o `select` em src/lib/noticias.ts.
-  const [{ proximas }, avisos] = await Promise.all([buscarNoticias(12), buscarAvisosPublicos(3)])
+  const [{ proximas }, avisos, proximaAula] = await Promise.all([
+    buscarNoticias(12),
+    buscarAvisosPublicos(3),
+    buscarProximaAula(),
+  ])
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#0e0f2d]">
@@ -52,6 +59,18 @@ export default async function PaginaInicial() {
           tudo num lugar só, acessível para todo mundo da turma.
         </p>
       </section>
+
+      {/* A próxima aula abre o conteúdo: é a pergunta mais comum de quem
+          chega — "quando é, do que é, e com quem". */}
+      {proximaAula && (
+        <section className="relative z-10 mx-auto max-w-[840px] px-5 pb-12">
+          <h2 className="titulo-display mb-5 flex items-center gap-2.5 text-[24px]">
+            <CalendarDays size={22} className="text-hover-blurple" aria-hidden />
+            Próxima aula
+          </h2>
+          <CardProximaAula aula={proximaAula} />
+        </section>
+      )}
 
       {/* Avisos, acima do que está chegando: recado que vale o semestre
           inteiro pesa mais do que a próxima entrega. */}

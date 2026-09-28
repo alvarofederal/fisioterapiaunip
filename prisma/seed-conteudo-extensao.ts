@@ -172,7 +172,7 @@ async function main() {
     const aula = await prisma.aula.findFirst({
       // donoId nulo: cronograma da turma, não estudo particular de ninguém.
       where: { materiaId: materia.id, data: dataDeEncontro(item.data), donoId: null },
-      select: { id: true, conteudo: true, professor: true, responsavel: true },
+      select: { id: true, titulo: true, conteudo: true, professor: true, responsavel: true },
     })
 
     const dia = item.data.split("-").reverse().join("/")
@@ -186,7 +186,11 @@ async function main() {
 
     // Os nomes vêm do documento e não conflitam com texto escrito à mão, por
     // isso são gravados mesmo quando o conteúdo já está preenchido.
-    const nomes: { professor?: string | null; responsavel?: string | null } = {}
+    const nomes: { titulo?: string; professor?: string | null; responsavel?: string | null } = {}
+
+    // O tema e a primeira linha do conteudo oficial. So entra onde o titulo
+    // esta vazio: um tema editado pela tela e trabalho de alguem.
+    if (!aula.titulo?.trim()) nomes.titulo = primeiraLinha
     if ((aula.professor ?? "") !== item.professor) nomes.professor = item.professor || null
     if ((aula.responsavel ?? "") !== item.responsavel) nomes.responsavel = item.responsavel || null
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { dataDeEncontro } from "@/lib/datas"
+import { dataDeEncontro, hojeNoBrasil, diasAteNoBrasil } from "@/lib/datas"
 import { diasAte } from "@/lib/dominio"
 
 describe("dataDeEncontro", () => {
@@ -37,5 +37,56 @@ describe("dataDeEncontro", () => {
   it("atravessa a virada de ano sem erro", () => {
     const fimDeAno = new Date("2026-12-31T22:00:00")
     expect(diasAte(dataDeEncontro("2027-01-01"), fimDeAno)).toBe(1)
+  })
+})
+
+describe("hojeNoBrasil", () => {
+  it("sábado de manhã é sábado", () => {
+    // 10h em Brasília = 13h UTC.
+    const agora = new Date("2026-10-17T13:00:00.000Z")
+    expect(hojeNoBrasil(agora).toISOString()).toBe("2026-10-17T00:00:00.000Z")
+  })
+
+  it("sexta às 22h ainda é sexta, mesmo já sendo sábado em UTC", () => {
+    // O instante que quebrava a "próxima aula": 01h UTC de sábado.
+    const agora = new Date("2026-10-17T01:00:00.000Z")
+    expect(hojeNoBrasil(agora).toISOString()).toBe("2026-10-16T00:00:00.000Z")
+  })
+
+  it("sábado às 23h30 continua sábado", () => {
+    // 02h30 UTC de domingo.
+    const agora = new Date("2026-10-18T02:30:00.000Z")
+    expect(hojeNoBrasil(agora).toISOString()).toBe("2026-10-17T00:00:00.000Z")
+  })
+
+  it("a aula do dia fica dentro de um filtro gte", () => {
+    // É a comparação que a consulta faz: data >= hoje.
+    const aulaDeSabado = dataDeEncontro("2026-10-17")
+    const sabadoDeManha = new Date("2026-10-17T13:00:00.000Z")
+    expect(aulaDeSabado.getTime()).toBeGreaterThanOrEqual(hojeNoBrasil(sabadoDeManha).getTime())
+    // Com new Date() direto, a mesma aula ficaria de fora:
+    expect(aulaDeSabado.getTime()).toBeLessThan(sabadoDeManha.getTime())
+  })
+})
+
+describe("diasAteNoBrasil", () => {
+  const aula = dataDeEncontro("2026-10-17")
+
+  it("no dia da aula é zero, de manhã ou de noite", () => {
+    expect(diasAteNoBrasil(aula, new Date("2026-10-17T13:00:00.000Z"))).toBe(0)
+    expect(diasAteNoBrasil(aula, new Date("2026-10-18T02:30:00.000Z"))).toBe(0)
+  })
+
+  it("sexta à noite a aula de sábado é amanhã, não hoje", () => {
+    // 22h de Brasília, que já é sábado em UTC.
+    expect(diasAteNoBrasil(aula, new Date("2026-10-17T01:00:00.000Z"))).toBe(1)
+  })
+
+  it("conta a semana inteira", () => {
+    expect(diasAteNoBrasil(aula, new Date("2026-10-10T15:00:00.000Z"))).toBe(7)
+  })
+
+  it("aula passada dá negativo", () => {
+    expect(diasAteNoBrasil(aula, new Date("2026-10-20T15:00:00.000Z"))).toBe(-3)
   })
 })
