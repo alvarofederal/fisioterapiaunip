@@ -9,7 +9,7 @@ import {
   MARCOS_DO_TRABALHO,
   TRABALHO_SEM_MARCO,
   situacaoDoTrabalho,
-  SITUACOES_DO_TRABALHO,
+  seloDoTrabalho,
 } from "@/lib/atividades"
 import { dataDeEncontro } from "@/lib/datas"
 
@@ -218,18 +218,16 @@ describe("marcos do trabalho presencial", () => {
 })
 
 describe("situacaoDoTrabalho", () => {
-  const HOJE_REF = new Date("2026-09-27T10:00:00")
+  // Domingo 27/09, 10h em Brasília.
+  const HOJE_REF = new Date("2026-09-27T13:00:00.000Z")
   const d = (iso: string) => dataDeEncontro(iso)
 
   it("passado em sala e entrega lá na frente: aguardando entrega", () => {
-    // O caso dos três trabalhos do semestre: passados em agosto e setembro,
-    // todos entregues junto em 19/12.
     const s = situacaoDoTrabalho(
       { passadaEm: d("2026-09-19"), entregaEm: d("2026-12-19") },
       HOJE_REF
     )
     expect(s).toBe("AGUARDANDO_ENTREGA")
-    expect(SITUACOES_DO_TRABALHO[s].rotulo).toBe("Aguardar entrega do relatório")
   })
 
   it("passado hoje já conta como passado", () => {
@@ -240,19 +238,19 @@ describe("situacaoDoTrabalho", () => {
     expect(s).toBe("AGUARDANDO_ENTREGA")
   })
 
-  it("ainda não passado em sala", () => {
+  it("com data de passar no futuro: será passado", () => {
     const s = situacaoDoTrabalho(
       { passadaEm: d("2026-10-17"), entregaEm: d("2026-12-19") },
       HOJE_REF
     )
-    expect(s).toBe("A_RECEBER")
+    expect(s).toBe("SERA_PASSADO")
   })
 
-  it("sem data de quando foi passado, fica como a receber", () => {
-    // É o que se sabe dele: existe, vence em dezembro, e ninguém disse quando
-    // foi para a sala.
+  it("sem data de quando foi passado: só o prazo, não 'ainda não passado'", () => {
+    // O caso do Checklist: a data ficou em branco. Afirmar que ainda não foi
+    // passado seria inventar — o que se sabe é o prazo.
     const s = situacaoDoTrabalho({ passadaEm: null, entregaEm: d("2026-12-19") }, HOJE_REF)
-    expect(s).toBe("A_RECEBER")
+    expect(s).toBe("SO_PRAZO")
   })
 
   it("entrega vencida encerra, mesmo tendo sido passado", () => {
@@ -260,19 +258,64 @@ describe("situacaoDoTrabalho", () => {
       { passadaEm: d("2026-08-08"), entregaEm: d("2026-09-01") },
       HOJE_REF
     )
-    expect(s).toBe("ENTREGUE")
-  })
-
-  it("a entrega decide antes da data de quando foi passado", () => {
-    // Trabalho com as duas datas no passado é encerrado, não aguardando.
-    const s = situacaoDoTrabalho(
-      { passadaEm: d("2026-09-20"), entregaEm: d("2026-09-25") },
-      HOJE_REF
-    )
-    expect(s).toBe("ENTREGUE")
+    expect(s).toBe("ENCERRADO")
   })
 
   it("sem data nenhuma não quebra", () => {
-    expect(situacaoDoTrabalho({ passadaEm: null, entregaEm: null }, HOJE_REF)).toBe("A_RECEBER")
+    expect(situacaoDoTrabalho({ passadaEm: null, entregaEm: null }, HOJE_REF)).toBe("SO_PRAZO")
+  })
+})
+
+describe("seloDoTrabalho", () => {
+  const HOJE_REF = new Date("2026-09-27T13:00:00.000Z")
+  const d = (iso: string) => dataDeEncontro(iso)
+
+  it("aguardando entrega mostra também a data da entrega", () => {
+    // A data tinha sumido do selo quando ele passou a dizer a situação.
+    const selo = seloDoTrabalho({ passadaEm: d("2026-09-19"), entregaEm: d("2026-12-19") }, HOJE_REF)
+    expect(selo.texto).toContain("Aguardar entrega do relatório")
+    expect(selo.texto).toContain("19")
+    expect(selo.texto).toContain("dez")
+  })
+
+  it("sem data de passar mostra 'Entregar até' com o prazo", () => {
+    const selo = seloDoTrabalho({ passadaEm: null, entregaEm: d("2026-12-19") }, HOJE_REF)
+    expect(selo.texto).toMatch(/^Entregar até 19/)
+    expect(selo.texto).not.toContain("não passado")
+  })
+
+  it("será passado mostra a data da aula", () => {
+    const selo = seloDoTrabalho({ passadaEm: d("2026-10-17"), entregaEm: d("2026-12-19") }, HOJE_REF)
+    expect(selo.texto).toMatch(/^Será passado em 17/)
+  })
+
+  it("na última semana o prazo passa na frente, com contagem", () => {
+    // Faltando 3 dias, o que importa é não chegar sem a folha.
+    const selo = seloDoTrabalho({ passadaEm: d("2026-09-19"), entregaEm: d("2026-09-30") }, HOJE_REF)
+    expect(selo.texto).toBe("Faltam 3 dias para entregar")
+    expect(selo.cor).toBe("#fda220")
+  })
+
+  it("entrega amanhã fica em vermelho", () => {
+    const selo = seloDoTrabalho({ passadaEm: d("2026-09-19"), entregaEm: d("2026-09-28") }, HOJE_REF)
+    expect(selo.texto).toBe("Entrega amanhã")
+    expect(selo.cor).toBe("#de2761")
+  })
+
+  it("entrega hoje fica em vermelho", () => {
+    const selo = seloDoTrabalho({ passadaEm: null, entregaEm: d("2026-09-27") }, HOJE_REF)
+    expect(selo.texto).toBe("Entrega hoje")
+  })
+
+  it("sexta à noite a entrega de sábado é amanhã, não hoje", () => {
+    // 22h de Brasília, que já é sábado em UTC.
+    const sextaNoite = new Date("2026-10-17T01:00:00.000Z")
+    const selo = seloDoTrabalho({ passadaEm: null, entregaEm: d("2026-10-17") }, sextaNoite)
+    expect(selo.texto).toBe("Entrega amanhã")
+  })
+
+  it("encerrado não conta dias", () => {
+    const selo = seloDoTrabalho({ passadaEm: d("2026-08-08"), entregaEm: d("2026-09-01") }, HOJE_REF)
+    expect(selo.texto).toBe("Prazo de entrega encerrado")
   })
 })

@@ -1,7 +1,7 @@
 import { CalendarClock, Paperclip, Lock } from "lucide-react"
 import type { CorTema, TipoAtividade } from "@/generated/prisma"
 import { CORES_MATERIA, TIPOS_ATIVIDADE, diasAte } from "@/lib/dominio"
-import { situacaoDoTrabalho, SITUACOES_DO_TRABALHO } from "@/lib/atividades"
+import { seloDoTrabalho } from "@/lib/atividades"
 import { cn } from "@/lib/utils"
 
 /**
@@ -64,9 +64,9 @@ export function CardNoticia({ noticia }: { noticia: NoticiaPublica }) {
   // Trabalho mostra a situacao, nao a data: os tres do semestre vencem no
   // mesmo dia e "19 de dez" nao distinguia nenhum deles.
   const ehTrabalho = noticia.tipo === "TRABALHO_EXTRA_CLASSE"
-  const situacao = SITUACOES_DO_TRABALHO[situacaoDoTrabalho(noticia)]
-  const info = ehTrabalho
-    ? { texto: situacao.rotulo, cor: situacao.cor, fundo: situacao.suave }
+  const seloTrabalho = ehTrabalho ? seloDoTrabalho(noticia) : null
+  const info = seloTrabalho
+    ? { texto: seloTrabalho.texto, cor: seloTrabalho.cor, fundo: seloTrabalho.suave }
     : selo(data, ehEntrega)
   const passou = data ? diasAte(data) < 0 : false
 

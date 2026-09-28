@@ -1,6 +1,7 @@
 // src/lib/atividades.ts
 import type { Modalidade, TipoAtividade } from "@/generated/prisma"
 import { dataQueImporta, diasAte } from "./dominio"
+import { diasAteNoBrasil } from "./datas"
 
 /**
  * Ordem em que a turma lê o mural.
@@ -138,36 +139,9 @@ export function marcosCumpridos(progresso: ProgressoDoTrabalho): number {
 
 // ─── Situação do trabalho ────────────────────────────────────────
 
-/**
- * Em que pé está o trabalho, do ponto de vista da turma.
- *
- * Com uma data só — a de entrega — os três trabalhos do semestre apareciam
- * como "19 de dez" e "A fazer", sem dizer se já tinham sido passados em sala
- * ou se ainda viriam. São dois momentos distintos: o professor passa numa
- * aula, a turma junta tudo, e a entrega é uma só, no fim do semestre.
- */
-export const SITUACOES_DO_TRABALHO = {
-  A_RECEBER: {
-    rotulo: "Ainda não passado",
-    curto: "A receber",
-    cor: "#babcd9",
-    suave: "rgba(186, 188, 217, 0.12)",
-  },
-  AGUARDANDO_ENTREGA: {
-    rotulo: "Aguardar entrega do relatório",
-    curto: "Aguardando entrega",
-    cor: "#fda220",
-    suave: "rgba(253, 162, 32, 0.16)",
-  },
-  ENTREGUE: {
-    rotulo: "Prazo de entrega encerrado",
-    curto: "Encerrado",
-    cor: "#99aab5",
-    suave: "rgba(153, 170, 181, 0.12)",
-  },
-} as const
-
-export type SituacaoDoTrabalho = keyof typeof SITUACOES_DO_TRABALHO
+/** "19 de dez." — o formato que o selo do trabalho sempre usou. */
+const dataCurta = (d: Date) =>
+  d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", timeZone: "UTC" })
 
 export type TrabalhoComDatas = {
   passadaEm: Date | null
@@ -175,22 +149,106 @@ export type TrabalhoComDatas = {
 }
 
 /**
+ * Em que pé está o trabalho, do ponto de vista da turma.
+ *
+ * São dois momentos distintos: o professor passa numa aula, a turma junta
+ * tudo, e a entrega é uma só, no fim do semestre. Cada situação diz a data
+ * que importa naquele momento — a entrega enquanto se espera por ela, o dia
+ * da aula enquanto o trabalho nem foi passado.
+ *
+ * Sem `passadaEm` o selo mostra só o prazo, como sempre mostrou. Uma versão
+ * anterior dizia "Ainda não passado" nesse caso, e isso afirmava algo que o
+ * sistema não sabe: a data só estava em branco.
+ */
+export const SITUACOES_DO_TRABALHO = {
+  SERA_PASSADO: {
+    texto: (t: TrabalhoComDatas) =>
+      t.passadaEm ? `Será passado em ${dataCurta(t.passadaEm)}` : "Será passado em sala",
+    cor: "#babcd9",
+    suave: "rgba(186, 188, 217, 0.12)",
+  },
+  AGUARDANDO_ENTREGA: {
+    texto: (t: TrabalhoComDatas) =>
+      t.entregaEm
+        ? `Aguardar entrega do relatório · ${dataCurta(t.entregaEm)}`
+        : "Aguardar entrega do relatório",
+    cor: "#fda220",
+    suave: "rgba(253, 162, 32, 0.16)",
+  },
+  SO_PRAZO: {
+    texto: (t: TrabalhoComDatas) =>
+      t.entregaEm ? `Entregar até ${dataCurta(t.entregaEm)}` : "Sem prazo definido",
+    cor: "#babcd9",
+    suave: "rgba(186, 188, 217, 0.12)",
+  },
+  ENCERRADO: {
+    texto: () => "Prazo de entrega encerrado",
+    cor: "#99aab5",
+    suave: "rgba(153, 170, 181, 0.12)",
+  },
+} as const
+
+export type SituacaoDoTrabalho = keyof typeof SITUACOES_DO_TRABALHO
+
+/**
  * A situação sai das duas datas, nesta ordem de decisão:
  *
- * entrega no passado  → encerrado, não importa quando foi passado
- * passado em sala     → aguardando a entrega
- * resto               → ainda não passado
+ * entrega no passado        → encerrado, não importa quando foi passado
+ * passado em sala até hoje  → aguardando a entrega
+ * data de passar no futuro  → será passado
+ * sem data de passar        → só o prazo, que é tudo o que se sabe
  *
- * Sem `passadaEm` preenchido, um trabalho com entrega futura cai em
- * "ainda não passado" — que é literalmente o que se sabe dele.
+ * Os dias são contados no fuso da turma: a data de encontro está gravada
+ * como meia-noite UTC, e o agora em UTC já é o dia seguinte às 21h daqui.
  */
 export function situacaoDoTrabalho(
   trabalho: TrabalhoComDatas,
   referencia = new Date()
 ): SituacaoDoTrabalho {
-  if (trabalho.entregaEm && diasAte(trabalho.entregaEm, referencia) < 0) return "ENTREGUE"
-  if (trabalho.passadaEm && diasAte(trabalho.passadaEm, referencia) <= 0) {
-    return "AGUARDANDO_ENTREGA"
+  if (trabalho.entregaEm && diasAteNoBrasil(trabalho.entregaEm, referencia) < 0) {
+    return "ENCERRADO"
   }
-  return "A_RECEBER"
+  if (trabalho.passadaEm) {
+    return diasAteNoBrasil(trabalho.passadaEm, referencia) <= 0
+      ? "AGUARDANDO_ENTREGA"
+      : "SERA_PASSADO"
+  }
+  return "SO_PRAZO"
+}
+
+export type SeloDoTrabalho = {
+  situacao: SituacaoDoTrabalho
+  texto: string
+  cor: string
+  suave: string
+}
+
+/**
+ * O selo que o card mostra.
+ *
+ * Na última semana antes da entrega o prazo passa na frente de tudo, com a
+ * contagem e a cor de urgência — é o que a turma precisa ver para não chegar
+ * no sábado sem a folha. Fora dela, vale o texto da situação.
+ *
+ * Mora aqui, e não nos cards, para o painel e a vitrine pública mostrarem
+ * exatamente a mesma coisa.
+ */
+export function seloDoTrabalho(
+  trabalho: TrabalhoComDatas,
+  referencia = new Date()
+): SeloDoTrabalho {
+  const situacao = situacaoDoTrabalho(trabalho, referencia)
+
+  if (situacao !== "ENCERRADO" && trabalho.entregaEm) {
+    const dias = diasAteNoBrasil(trabalho.entregaEm, referencia)
+    const urgente = { cor: "#de2761", suave: "rgba(222, 39, 97, 0.18)" }
+    const perto = { cor: "#fda220", suave: "rgba(253, 162, 32, 0.16)" }
+
+    if (dias === 0) return { situacao, texto: "Entrega hoje", ...urgente }
+    if (dias === 1) return { situacao, texto: "Entrega amanhã", ...urgente }
+    if (dias <= 7) return { situacao, texto: `Faltam ${dias} dias para entregar`, ...perto }
+  }
+
+  const info = SITUACOES_DO_TRABALHO[situacao]
+  return { situacao, texto: info.texto(trabalho), cor: info.cor, suave: info.suave }
 }

@@ -22,25 +22,12 @@ import {
   diasAte,
   formatarTamanho,
 } from "@/lib/dominio"
-import { situacaoDoTrabalho, SITUACOES_DO_TRABALHO } from "@/lib/atividades"
+import { seloDoTrabalho } from "@/lib/atividades"
 import { cn } from "@/lib/utils"
 
 export type AtividadeDoMural = Atividade & {
   materia: Pick<Materia, "id" | "nome" | "cor" | "modalidade"> | null
   anexos: Anexo[]
-}
-
-/**
- * Selo do trabalho: diz em que pé ele está, não só quando vence.
- *
- * "19 de dez" sozinho não informava nada — os três trabalhos do semestre
- * vencem no mesmo dia. O que a turma precisa saber é se já foi passado em
- * sala e está só esperando a entrega conjunta.
- */
-function seloDeTrabalho(atividade: { passadaEm: Date | null; entregaEm: Date | null }) {
-  const situacao = situacaoDoTrabalho(atividade)
-  const info = SITUACOES_DO_TRABALHO[situacao]
-  return { texto: info.rotulo, cor: info.cor, fundo: info.suave }
 }
 
 /** Selo de prazo: muda de cor conforme a urgência. */
@@ -118,7 +105,10 @@ export function CardAtividade({
   // Evento e congresso continuam com o selo de proximidade, que é o que
   // importa para quem vai comparecer.
   const ehTrabalho = atividade.tipo === "TRABALHO_EXTRA_CLASSE"
-  const info = ehTrabalho ? seloDeTrabalho(atividade) : selo(data, ehEntrega)
+  const seloTrabalho = ehTrabalho ? seloDoTrabalho(atividade) : null
+  const info = seloTrabalho
+    ? { texto: seloTrabalho.texto, cor: seloTrabalho.cor, fundo: seloTrabalho.suave }
+    : selo(data, ehEntrega)
   const passou = data ? diasAte(data) < 0 : false
 
   // Se não há nada além do cabeçalho, abrir não mostraria nada — o card fica
