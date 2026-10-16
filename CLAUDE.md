@@ -58,6 +58,9 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
 9d. **"Hoje" para data de encontro é `hojeNoBrasil()`**, nunca `new Date()`. A aula de sábado
    está gravada como sábado 00:00Z, que é sexta às 21h aqui — comparar com o agora faz a
    aula sumir no próprio dia. Para contar dias, `diasAteNoBrasil()`.
+9e. **Instante com hora (ex.: `ultimoAcesso`) sai no fuso de Brasília**, por `ultimoLoginTexto()` e
+   `dataHoraNoBrasil()` de `src/lib/datas.ts` — nunca com `timeZone: "UTC"`, que é só para data de
+   encontro. Em UTC, o login das 21h40 de quinta aparece como "hoje às 00:40" de sexta.
 5. **Não revele se um e-mail existe.** O login recusa senha errada e conta inativa com a
    mesma mensagem, de propósito.
 6. **Sempre validar entrada com Zod** em Server Actions e API Routes.
@@ -101,7 +104,7 @@ import { CORES_MATERIA } from "@/lib/dominio"  // vocabulários
 | `/painel/materias` | Logado | "Meus estudos" para o aluno: aulas dadas ou unidades do AVA |
 | `/painel/cronograma` | Logado | Encontros do semestre + acompanhamento pessoal de estudo |
 | `/painel/atividades` | Logado | Trabalhos, seminários, eventos e congressos |
-| `/painel/usuarios` | **ADMIN** | Liberar e gerenciar contas |
+| `/painel/usuarios` | **ADMIN** | Tabela de contas: último login, filtro por situação, ordenação; liberar e gerenciar |
 | `/painel/configuracoes` | **ADMIN** | O que a turma vê |
 | `/api/register` | Público | Cadastro (rate limit por IP) |
 | `/api/upload` | Logado | Upload para o Cloudinary |

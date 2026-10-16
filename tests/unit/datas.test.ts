@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { dataDeEncontro, hojeNoBrasil, diasAteNoBrasil } from "@/lib/datas"
+import {
+  dataDeEncontro,
+  hojeNoBrasil,
+  diasAteNoBrasil,
+  ultimoLoginTexto,
+  dataHoraNoBrasil,
+} from "@/lib/datas"
 import { diasAte } from "@/lib/dominio"
 
 describe("dataDeEncontro", () => {
@@ -88,5 +94,51 @@ describe("diasAteNoBrasil", () => {
 
   it("aula passada dá negativo", () => {
     expect(diasAteNoBrasil(aula, new Date("2026-10-20T15:00:00.000Z"))).toBe(-3)
+  })
+})
+
+describe("ultimoLoginTexto", () => {
+  // Sexta, 16/10, 14h em Brasília.
+  const AGORA = new Date("2026-10-16T17:00:00.000Z")
+
+  it("menos de um minuto é agora há pouco — inclusive relógio adiantado", () => {
+    expect(ultimoLoginTexto(new Date("2026-10-16T16:59:40.000Z"), AGORA)).toBe("agora há pouco")
+    expect(ultimoLoginTexto(new Date("2026-10-16T17:00:30.000Z"), AGORA)).toBe("agora há pouco")
+  })
+
+  it("na última hora conta os minutos", () => {
+    expect(ultimoLoginTexto(new Date("2026-10-16T16:58:30.000Z"), AGORA)).toBe("há 1 min")
+    expect(ultimoLoginTexto(new Date("2026-10-16T16:15:00.000Z"), AGORA)).toBe("há 45 min")
+  })
+
+  it("mais cedo no mesmo dia mostra a hora de Brasília", () => {
+    expect(ultimoLoginTexto(new Date("2026-10-16T11:32:00.000Z"), AGORA)).toBe("hoje às 08:32")
+  })
+
+  it("quinta às 21h40 é ontem, mesmo sendo sexta em UTC", () => {
+    // O instante é 16/10 00:40Z. Formatado em UTC, como as aulas, seria
+    // "hoje às 00:40" — a armadilha que o fuso da turma evita.
+    expect(ultimoLoginTexto(new Date("2026-10-16T00:40:00.000Z"), AGORA)).toBe("ontem às 21:40")
+  })
+
+  it("logo depois da meia-noite, quem entrou às 23h é de ontem", () => {
+    const meiaNoiteEMeia = new Date("2026-10-17T03:30:00.000Z") // 17/10 00:30 em Brasília
+    expect(ultimoLoginTexto(new Date("2026-10-17T02:00:00.000Z"), meiaNoiteEMeia)).toBe("ontem às 23:00")
+  })
+
+  it("na mesma semana conta os dias", () => {
+    expect(ultimoLoginTexto(new Date("2026-10-13T15:00:00.000Z"), AGORA)).toBe("há 3 dias")
+  })
+
+  it("mais antigo mostra a data; de outro ano, com o ano", () => {
+    expect(ultimoLoginTexto(new Date("2026-10-01T15:00:00.000Z"), AGORA)).toBe("1 de out.")
+    expect(ultimoLoginTexto(new Date("2025-12-20T15:00:00.000Z"), AGORA)).toBe("20 de dez. de 2025")
+  })
+})
+
+describe("dataHoraNoBrasil", () => {
+  it("dá data e hora completas no fuso da turma", () => {
+    expect(dataHoraNoBrasil(new Date("2026-10-16T17:32:00.000Z"))).toBe("16/10/2026 às 14:32")
+    expect(dataHoraNoBrasil(new Date("2026-10-16T00:40:00.000Z"))).toBe("15/10/2026 às 21:40")
   })
 })

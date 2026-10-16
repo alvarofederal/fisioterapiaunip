@@ -44,3 +44,53 @@ export function diasAteNoBrasil(data: Date, agora = new Date()): number {
   const umDia = 24 * 60 * 60 * 1000
   return Math.round((data.getTime() - hojeNoBrasil(agora).getTime()) / umDia)
 }
+
+const FUSO_DA_TURMA = "America/Sao_Paulo"
+
+function horaNoBrasil(instante: Date): string {
+  return instante.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: FUSO_DA_TURMA,
+  })
+}
+
+/**
+ * Último login, para a lista de usuários: "há 5 min", "hoje às 14:32",
+ * "ontem às 21:40", "há 3 dias", "12 de out.", "12 de out. de 2025".
+ *
+ * Diferente da data de encontro: `ultimoAcesso` é um instante de verdade, com
+ * hora. Formatar em UTC, como se faz com as aulas, mostraria o login das 22h
+ * de Brasília como "amanhã às 01:00". Aqui tudo sai no fuso da turma — e
+ * "hoje" e "ontem" são dias do calendário de Brasília, não de 24 horas.
+ */
+export function ultimoLoginTexto(instante: Date, agora = new Date()): string {
+  const minutos = Math.floor((agora.getTime() - instante.getTime()) / 60_000)
+  // Relógio do servidor um pouco adiantado não pode virar "há -2 min".
+  if (minutos < 1) return "agora há pouco"
+  if (minutos < 60) return `há ${minutos} min`
+
+  const dias = -diasAteNoBrasil(hojeNoBrasil(instante), agora)
+  if (dias === 0) return `hoje às ${horaNoBrasil(instante)}`
+  if (dias === 1) return `ontem às ${horaNoBrasil(instante)}`
+  if (dias < 7) return `há ${dias} dias`
+
+  const ano = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: FUSO_DA_TURMA }).slice(0, 4)
+  return instante.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "short",
+    ...(ano(instante) === ano(agora) ? {} : { year: "numeric" }),
+    timeZone: FUSO_DA_TURMA,
+  })
+}
+
+/** "16/10/2026 às 14:32", no fuso da turma — o texto completo para o title. */
+export function dataHoraNoBrasil(instante: Date): string {
+  const dia = instante.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: FUSO_DA_TURMA,
+  })
+  return `${dia} às ${horaNoBrasil(instante)}`
+}
