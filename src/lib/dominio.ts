@@ -119,6 +119,8 @@ export const TIPOS_ATIVIDADE: Record<
       usaLink: boolean
       usaCargaHoraria: boolean
       usaIntegrantes: boolean
+      /** Botão "Participar" e a lista de quem vai, quando o ADMIN pede confirmação. */
+      usaParticipacao: boolean
     }
   }
 > = {
@@ -139,6 +141,7 @@ export const TIPOS_ATIVIDADE: Record<
       usaLink: true,
       usaCargaHoraria: false,
       usaIntegrantes: true,
+      usaParticipacao: false,
     },
   },
   SEMINARIO: {
@@ -158,6 +161,7 @@ export const TIPOS_ATIVIDADE: Record<
       usaLink: false,
       usaCargaHoraria: false,
       usaIntegrantes: true,
+      usaParticipacao: false,
     },
   },
   EVENTO: {
@@ -177,6 +181,7 @@ export const TIPOS_ATIVIDADE: Record<
       usaLink: true,
       usaCargaHoraria: true,
       usaIntegrantes: false,
+      usaParticipacao: true,
     },
   },
   CONGRESSO: {
@@ -196,6 +201,7 @@ export const TIPOS_ATIVIDADE: Record<
       usaLink: true,
       usaCargaHoraria: true,
       usaIntegrantes: false,
+      usaParticipacao: false,
     },
   },
 }

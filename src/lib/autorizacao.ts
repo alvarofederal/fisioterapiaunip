@@ -35,3 +35,22 @@ export async function exigirAdmin(): Promise<
 
   return { ok: true, usuario: { id: usuario.id, nome: usuario.nome, role: usuario.role } }
 }
+
+/**
+ * Qualquer conta ativa, aluno ou ADMIN — para o que é de cada um, como
+ * confirmar presença num evento. O papel e o `ativo` também vêm do banco.
+ */
+export async function exigirContaAtiva(): Promise<
+  { ok: true; usuario: Autorizado } | { ok: false; erro: string }
+> {
+  const sessao = await auth()
+  if (!sessao?.user?.id) return { ok: false, erro: "Você precisa entrar no portal." }
+
+  const usuario = await prisma.user.findUnique({
+    where: { id: sessao.user.id },
+    select: { id: true, nome: true, role: true, ativo: true },
+  })
+  if (!usuario?.ativo) return { ok: false, erro: "Sua conta não está ativa." }
+
+  return { ok: true, usuario: { id: usuario.id, nome: usuario.nome, role: usuario.role } }
+}

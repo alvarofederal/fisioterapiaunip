@@ -37,6 +37,7 @@ export type AtividadeEditavel = {
   linkExterno: string | null
   cargaHoraria: number | null
   integrantes: string | null
+  pedeParticipacao?: boolean
   anexos?: AnexoEnviado[]
 }
 
@@ -62,6 +63,7 @@ function estadoInicial(atividade?: AtividadeEditavel) {
     linkExterno: atividade?.linkExterno ?? "",
     cargaHoraria: atividade?.cargaHoraria != null ? String(atividade.cargaHoraria) : "",
     integrantes: atividade?.integrantes ?? "",
+    pedeParticipacao: atividade?.pedeParticipacao ?? false,
     anexos: atividade?.anexos ?? ([] as AnexoEnviado[]),
   }
 }
@@ -442,6 +444,27 @@ export function DialogoAtividade({
                 <p className="mt-2 text-[12px] text-ekko-red">{erroDe("linkExterno")}</p>
               )}
             </div>
+          )}
+
+          {campos.usaParticipacao && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3">
+              <input
+                type="checkbox"
+                checked={dados.pedeParticipacao}
+                onChange={(e) => setDados((atual) => ({ ...atual, pedeParticipacao: e.target.checked }))}
+                className="mt-0.5 size-4 shrink-0 accent-blurple"
+              />
+              <span className="min-w-0">
+                <span className="block text-[14px] font-medium text-white">
+                  Pedir confirmação de participação
+                </span>
+                <span className="mt-0.5 block text-[13px] leading-relaxed text-greyple">
+                  {dados.pedeParticipacao
+                    ? "Cada aluno ganha o botão Participar, e você vê a lista de quem vai para copiar e mandar ao professor."
+                    : "Sem o botão: o evento fica só como aviso no mural."}
+                </span>
+              </span>
+            </label>
           )}
 
           <CampoAnexos

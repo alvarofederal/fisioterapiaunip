@@ -61,6 +61,10 @@ Leia `spec/07-portal-spec.md` antes de implementar qualquer funcionalidade.
 9e. **Instante com hora (ex.: `ultimoAcesso`) sai no fuso de Brasília**, por `ultimoLoginTexto()` e
    `dataHoraNoBrasil()` de `src/lib/datas.ts` — nunca com `timeZone: "UTC"`, que é só para data de
    encontro. Em UTC, o login das 21h40 de quinta aparece como "hoje às 00:40" de sexta.
+9f. **Participação em evento é de cada um; a lista é do ADMIN.** O ADMIN liga `pedeParticipacao`
+   no evento (só tipos com `usaParticipacao` em `TIPOS_ATIVIDADE`); cada conta ativa confirma ou
+   desiste por `definirParticipacao` até o dia do evento (`aceitaParticipacao`). Nome e RA de quem
+   vai só seguem para o navegador do ADMIN, que copia a lista pronta para o professor.
 5. **Não revele se um e-mail existe.** O login recusa senha errada e conta inativa com a
    mesma mensagem, de propósito.
 6. **Sempre validar entrada com Zod** em Server Actions e API Routes.

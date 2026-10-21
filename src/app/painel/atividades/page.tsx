@@ -10,6 +10,7 @@ import { MarcosDoTrabalho } from "../_components/marcos-trabalho"
 import { exigirRotaLiberada } from "@/lib/porta-de-rota"
 import type { TipoAtividade } from "@/generated/prisma"
 import { CardAtividade, type AtividadeDoMural } from "../_components/card-atividade"
+import { INCLUIR_PARTICIPACOES, participacaoDoCard } from "../_components/participacao-do-card"
 import { DialogoAtividade } from "./_components/dialogo-atividade"
 import { AcoesAtividade } from "./_components/acoes-atividade"
 
@@ -44,6 +45,7 @@ export default async function PaginaAtividades({
         anexos: true,
         // Só o progresso de quem está lendo: a folha é de cada um.
         progressos: { where: { usuarioId } },
+        participacoes: INCLUIR_PARTICIPACOES,
       },
     }),
     prisma.atividade.groupBy({
@@ -90,6 +92,7 @@ export default async function PaginaAtividades({
           />
         ) : undefined
       }
+      participacao={participacaoDoCard(atividade, usuarioId, ehAdmin)}
       acoes={
         ehAdmin ? (
           <AcoesAtividade
@@ -111,6 +114,7 @@ export default async function PaginaAtividades({
               linkExterno: atividade.linkExterno,
               cargaHoraria: atividade.cargaHoraria,
               integrantes: atividade.integrantes,
+              pedeParticipacao: atividade.pedeParticipacao,
               anexos: atividade.anexos.map((x) => ({
                 nome: x.nome,
                 url: x.url,

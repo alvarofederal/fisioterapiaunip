@@ -9,6 +9,7 @@ import { MuralAvisos } from "./_components/mural-avisos"
 import { lerConfiguracoes } from "@/lib/configuracoes-servidor"
 import { hojeNoBrasil, diasAteNoBrasil } from "@/lib/datas"
 import { CardAtividade, type AtividadeDoMural } from "./_components/card-atividade"
+import { INCLUIR_PARTICIPACOES, participacaoDoCard } from "./_components/participacao-do-card"
 
 export const metadata = { title: "Início" }
 
@@ -35,6 +36,7 @@ export default async function MuralDaTurma() {
         progressos: sessao?.user?.id
           ? { where: { usuarioId: sessao.user.id } }
           : { where: { usuarioId: "" } },
+        participacoes: INCLUIR_PARTICIPACOES,
       },
       take: 60,
     }),
@@ -94,6 +96,7 @@ export default async function MuralDaTurma() {
           />
         ) : undefined
       }
+      participacao={participacaoDoCard(atividade, sessao?.user?.id, ehAdmin)}
     />
   )
   const total = aFazer.length + jaPassaram.length

@@ -54,6 +54,9 @@ export const atividadeSchema = z
       }),
     integrantes: z.string().trim().max(1000, "A lista pode ter até 1000 caracteres").optional().or(z.literal("")),
 
+    /// Evento com botão "Participar". Em tipo que não usa, a action grava false.
+    pedeParticipacao: z.boolean().optional().default(false),
+
     /// Metadados dos arquivos já enviados ao Cloudinary por /api/upload.
     anexos: z
       .array(

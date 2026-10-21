@@ -37,6 +37,7 @@ model User {
   progressosUnidade   ProgressoUnidade[]   @relation("ProgressoDoUsuario")
   estudosTeleaula     EstudoTeleaula[]     @relation("EstudoTeleaulaDoUsuario")
   progressosAtividade ProgressoAtividade[] @relation("ProgressoAtividadeDoUsuario")
+  participacoes       ParticipacaoAtividade[] @relation("ParticipacaoDoUsuario")
   unidadesProprias    Unidade[]            @relation("UnidadeDoAluno")
   avisosCriados       Aviso[]              @relation("AvisoCriadoPor")
   estudos             Estudo[]             @relation("EstudoDoUsuario")
@@ -150,6 +151,10 @@ model Atividade {
   /// Quem apresenta junto — trabalho em grupo e SEMINARIO.
   integrantes String? @db.Text
 
+  /// EVENTO que pede confirmação: cada aluno clica em "Participar" e entra na
+  /// lista que o ADMIN copia para o professor. Desligado, o evento é só aviso.
+  pedeParticipacao Boolean @default(false)
+
   /// Arquivada sai do mural mas continua consultável.
   /// Só o ADMIN arquiva, desarquiva e exclui — o aluno apenas lê.
   arquivada   Boolean   @default(false)
@@ -161,8 +166,9 @@ model Atividade {
   materia     Materia?             @relation(fields: [materiaId], references: [id])
   criadoPorId String
   criadoPor   User                 @relation("AtividadeCriadaPor", fields: [criadoPorId], references: [id])
-  anexos      Anexo[]
-  progressos  ProgressoAtividade[]
+  anexos        Anexo[]
+  progressos    ProgressoAtividade[]
+  participacoes ParticipacaoAtividade[]
 
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
@@ -512,6 +518,23 @@ model ProgressoAtividade {
   @@unique([atividadeId, usuarioId])
   @@index([usuarioId])
   @@map("progressos_atividade")
+}
+
+/// Quem confirmou que vai a um EVENTO com `pedeParticipacao`.
+/// Uma linha por aluno e evento: confirmar de novo não duplica.
+model ParticipacaoAtividade {
+  id String @id @default(cuid())
+
+  atividadeId String
+  atividade   Atividade @relation(fields: [atividadeId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  usuario     User      @relation("ParticipacaoDoUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  criadoEm DateTime @default(now())
+
+  @@unique([atividadeId, usuarioId])
+  @@index([usuarioId])
+  @@map("participacoes_atividade")
 }
 
 // ─────────────────────────────────────────

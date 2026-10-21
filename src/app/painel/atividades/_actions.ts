@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
-import { exigirAdmin } from "@/lib/autorizacao"
+import { exigirAdmin, exigirContaAtiva } from "@/lib/autorizacao"
+import { TIPOS_ATIVIDADE } from "@/lib/dominio"
+import { aceitaParticipacao } from "@/lib/atividades"
 import { apagarArquivos } from "@/lib/cloudinary"
 import { atividadeSchema } from "@/lib/validators/atividade"
 import { dataDeEncontro } from "@/lib/datas"
@@ -37,6 +39,8 @@ function dadosDoFormulario(validado: ReturnType<typeof atividadeSchema.parse>) {
     linkExterno: validado.linkExterno || null,
     cargaHoraria: validado.cargaHoraria,
     integrantes: validado.integrantes || null,
+    // Só evento pede confirmação; trocar o tipo desliga a marca.
+    pedeParticipacao: TIPOS_ATIVIDADE[validado.tipo].campos.usaParticipacao && validado.pedeParticipacao,
   }
   return campos
 }
@@ -158,6 +162,8 @@ export async function clonarAtividade(id: string): Promise<Resultado> {
         linkExterno: original.linkExterno,
         cargaHoraria: original.cargaHoraria,
         integrantes: original.integrantes,
+        // A marca é configuração e vai junto; a lista de quem vai não — é daquele evento.
+        pedeParticipacao: original.pedeParticipacao,
         passadaEm: original.passadaEm,
         horaInicio: original.horaInicio,
         horaFim: original.horaFim,
@@ -194,6 +200,50 @@ export async function excluirAtividade(id: string): Promise<Resultado> {
   // Sem isso os arquivos ficariam pagando espaço no Cloudinary para sempre,
   // sem nada no banco apontando para eles.
   if (atividade.anexos.length > 0) await apagarArquivos(atividade.anexos)
+
+  revalidarTelas()
+  return { ok: true }
+}
+
+// ─── Participação (de cada aluno) ────────────────────────────────
+
+/**
+ * "Participar" e "Cancelar participação" num evento que pede confirmação.
+ * Qualquer conta ativa decide só por si — a lista é de quem clicou.
+ * Repetir o clique não duplica nem quebra: a linha é única por aluno e evento.
+ */
+export async function definirParticipacao(atividadeId: unknown, vai: unknown): Promise<Resultado> {
+  if (typeof atividadeId !== "string" || !atividadeId || typeof vai !== "boolean") {
+    return { ok: false, erro: "Pedido inválido." }
+  }
+
+  const quem = await exigirContaAtiva()
+  if (!quem.ok) return { ok: false, erro: quem.erro }
+
+  const evento = await prisma.atividade.findUnique({
+    where: { id: atividadeId },
+    select: { id: true, tipo: true, pedeParticipacao: true, arquivada: true, dataInicio: true },
+  })
+  if (!evento) return { ok: false, erro: "Evento não encontrado." }
+  if (!aceitaParticipacao(evento)) {
+    return { ok: false, erro: "As confirmações deste evento estão encerradas." }
+  }
+
+  const chave = { atividadeId, usuarioId: quem.usuario.id }
+  try {
+    if (vai) {
+      await prisma.participacaoAtividade.upsert({
+        where: { atividadeId_usuarioId: chave },
+        update: {},
+        create: chave,
+      })
+    } else {
+      await prisma.participacaoAtividade.deleteMany({ where: chave })
+    }
+  } catch (erro) {
+    console.error("Falha ao salvar participação:", erro)
+    return { ok: false, erro: "Não foi possível salvar. Tente de novo." }
+  }
 
   revalidarTelas()
   return { ok: true }

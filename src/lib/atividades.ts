@@ -1,6 +1,6 @@
 // src/lib/atividades.ts
 import type { Modalidade, TipoAtividade } from "@/generated/prisma"
-import { dataQueImporta, diasAte } from "./dominio"
+import { TIPOS_ATIVIDADE, dataQueImporta, diasAte } from "./dominio"
 import { diasAteNoBrasil } from "./datas"
 
 /**
@@ -251,4 +251,45 @@ export function seloDoTrabalho(
 
   const info = SITUACOES_DO_TRABALHO[situacao]
   return { situacao, texto: info.texto(trabalho), cor: info.cor, suave: info.suave }
+}
+
+// ─── Participação em evento ──────────────────────────────────────
+
+export type EventoComParticipacao = {
+  tipo: TipoAtividade
+  pedeParticipacao: boolean
+  arquivada: boolean
+  dataInicio: Date | null
+}
+
+/**
+ * Se ainda dá para confirmar ou desistir. Só em evento que pede confirmação,
+ * fora do arquivo e até o próprio dia — depois que aconteceu, a lista é a
+ * que foi para o professor, e mexer nela só bagunçaria o registro.
+ */
+export function aceitaParticipacao(evento: EventoComParticipacao, agora = new Date()): boolean {
+  if (!TIPOS_ATIVIDADE[evento.tipo].campos.usaParticipacao) return false
+  if (!evento.pedeParticipacao || evento.arquivada) return false
+  return evento.dataInicio === null || diasAteNoBrasil(evento.dataInicio, agora) >= 0
+}
+
+/**
+ * A lista pronta para colar no WhatsApp do professor: título, data, e os
+ * nomes na ordem em que confirmaram, com o RA — é por ele que a UNIP emite
+ * o certificado.
+ */
+export function textoDaListaDeParticipantes(
+  evento: { titulo: string; dataInicio: Date | null },
+  participantes: { nome: string; ra: string }[]
+): string {
+  const data = evento.dataInicio
+    ? ` — ${evento.dataInicio.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" })}`
+    : ""
+  const cabecalho = `${evento.titulo}${data}`
+
+  if (participantes.length === 0) return `${cabecalho}\nNinguém confirmou ainda.`
+
+  const linhas = participantes.map((p, i) => `${i + 1}. ${p.nome} — RA ${p.ra}`)
+  const rotulo = participantes.length === 1 ? "1 confirmado" : `${participantes.length} confirmados`
+  return [cabecalho, `${rotulo}:`, ...linhas].join("\n")
 }

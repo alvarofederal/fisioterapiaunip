@@ -13,6 +13,7 @@ import {
   Download,
   ChevronDown,
   CalendarPlus,
+  Check,
 } from "lucide-react"
 import type { Anexo, Atividade, Materia } from "@/generated/prisma"
 import {
@@ -89,11 +90,14 @@ export function CardAtividade({
   atividade,
   acoes,
   marcos,
+  participacao,
 }: {
   atividade: AtividadeDoMural
   acoes?: React.ReactNode
   /** Carimbo e correcao do aluno; so aparece em trabalho presencial. */
   marcos?: React.ReactNode
+  /** Evento que pede confirmação: o botão e, no resumo, se a pessoa vai. */
+  participacao?: { conteudo: React.ReactNode; vou: boolean; total: number }
 }) {
   const tipo = TIPOS_ATIVIDADE[atividade.tipo]
   const temaMateria = atividade.materia ? CORES_MATERIA[atividade.materia.cor] : null
@@ -123,6 +127,7 @@ export function CardAtividade({
     Boolean(atividade.horaInicio) ||
     Boolean(atividade.dataFim) ||
     Boolean(atividade.passadaEm) ||
+    Boolean(participacao) ||
     Boolean(acoes)
 
   const classesCartao = cn(
@@ -293,6 +298,8 @@ export function CardAtividade({
           summary rouba o clique que deveria abrir o accordion. */}
       {marcos}
 
+      {participacao?.conteudo}
+
       {acoes && (
         <div className="flex flex-wrap items-center gap-1 border-t border-white/[0.08] pt-3">
           {acoes}
@@ -341,6 +348,20 @@ export function CardAtividade({
               <ChevronDown size={13} className="rotate-180" aria-hidden />
               Fechar
             </span>
+
+            {/* Sem abrir o card: quem já confirmou vê que confirmou. */}
+            {participacao &&
+              (participacao.vou ? (
+                <span className="inline-flex items-center gap-1 font-medium text-spring-green">
+                  <Check size={12} aria-hidden />
+                  Você vai
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <Users size={11} aria-hidden />
+                  {participacao.total === 1 ? "1 confirmado" : `${participacao.total} confirmados`}
+                </span>
+              ))}
 
             {atividade.anexos.length > 0 && (
               <span className="inline-flex items-center gap-1 text-vivid-cerulean">
